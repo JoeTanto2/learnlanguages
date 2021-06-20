@@ -24,7 +24,6 @@ def registration (request):
             account = serializer.save()
             data['username'] = account.username
             data['email'] = account.email
-            data['password'] = account.password
             token = Token.objects.get(user=account).key
             data['token'] = token
         else:
