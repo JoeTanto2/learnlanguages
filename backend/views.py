@@ -41,7 +41,7 @@ def registration (request):
         user_id = User.objects.filter(username=account.username).values_list('id', flat=True)
         print(x['native'])
         native = x['native'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
-        desired = x['native'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
+        desired = x['desired'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
         print(type(native))
         print(type(desired))
         data1['user_id'] = user_id[0]
