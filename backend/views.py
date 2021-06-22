@@ -39,12 +39,17 @@ def registration (request):
         else:
             raise (serializer.errors)
         user_id = User.objects.filter(username=account.username).values_list('id', flat=True)
+        print(x['native'])
+        native = x['native'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
+        desired = x['native'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
+        print(type(native))
+        print(type(desired))
         data1['user_id'] = user_id[0]
         data1['name'] = x['name']
         data1['sex'] = x['sex']
         data1['about'] = x['about']
-        data1['native'] = x['native'].split('"')[1]
-        data1['desired'] = x['desired'].split('"')[1]
+        data1['native'] = native
+        data1['desired'] = desired
         serializer1 = Profile(data=data1)
         if serializer1.is_valid():
             serializer1.save()
