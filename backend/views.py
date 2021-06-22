@@ -1,15 +1,18 @@
 from django.contrib.auth.models import User
-from django.contrib.auth import logout
-from django.shortcuts import render
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.generics import UpdateAPIView
+from rest_framework.decorators import api_view, permission_classes,authentication_classes
 from rest_framework.response import Response
-from .serializer import Auth_user, Profile, UserCreation
+from .serializer import Auth_user, Profile, UserCreation, PasswordUpdate
+from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from .models import User_info
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
+from rest_framework.exceptions import ValidationError, ParseError
+
 
 @api_view(["POST"])
 def registration (request):
@@ -17,6 +20,12 @@ def registration (request):
         x = request.POST
         if not x:
             raise Http404("Data wasn't sent to the server")
+        email_check = User.objects.filter(email=x['email'])
+        username_check = User.objects.filter(username=x['username'])
+        if len(email_check) > 0:
+            raise ValidationError ('your email already exists')
+        if len(username_check) > 0:
+            raise ValidationError ('this username already exists')
         serializer = UserCreation(data=request.data)
         data = {}
         data1 = {}
@@ -60,7 +69,6 @@ def user_profile (request, pk):
     serializer1 = Profile(profile, many=True)
     return Response ({'user': serializer.data,
                       'profile': serializer1.data})
-
 class Login (ObtainAuthToken):
     @csrf_exempt
     def post(self, request, *args, **kwargs):
@@ -94,3 +102,27 @@ def logout(request):
     # simply delete the token to force a login
     request.user.auth_token.delete()
     return Response("You have been successfully logged out.")
+
+class Password_update(UpdateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+    serializer_class = PasswordUpdate
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data['data'])
+        if serializer.is_valid(raise_exception=True):
+            user = serializer.save()
+            return Response ({'user_id':user.id, 'username': user.username, 'message': 'Your password has been successfully updated'})
+        else:
+            return Response(serializer.errors)
+@csrf_exempt
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def profile_update (request):
+    user = request.user
+    serializer = Profile(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user_id=user)
+    else:
+        return Response (serializer.errors)
+    return Response ({'user_id': user.id, 'message': 'Your profile has been successfully updated'})
+
