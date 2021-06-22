@@ -35,7 +35,7 @@ def registration (request):
             data['email'] = account.email
             token = Token.objects.get(user=account).key
             data['token'] = token
-            data['id'] = account.id
+            data['user_id'] = account.id
         else:
             raise (serializer.errors)
         user_id = User.objects.filter(username=account.username).values_list('id', flat=True)
@@ -67,6 +67,7 @@ def user_profile (request, pk):
     for id in user:
         profile = User_info.objects.filter(user_id=id.id)
     serializer = Auth_user(user, many=True)
+    print(profile)
     if len(profile) > 0:
         serializer1 = Profile(profile, many=True)
         return Response ({'user': serializer.data,

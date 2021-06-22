@@ -11,8 +11,8 @@ class Auth_user (serializers.ModelSerializer):
         fields = ['username', 'email', 'password']
 
 class Profile (serializers.ModelSerializer):
-    about = serializers.CharField(required=False)
-    sex = serializers.CharField(required=False)
+    about = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    sex = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     class Meta:
         model = User_info
         fields = '__all__'

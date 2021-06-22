@@ -14,9 +14,9 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 class User_info (models.Model):
     user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100, blank=True)
-    sex = models.CharField(max_length=50, blank=True)
-    about = models.CharField(max_length=500, blank=True)
-    country = models.CharField(max_length=60, blank=True)
+    sex = models.CharField(max_length=50, blank=True, null=True)
+    about = models.CharField(max_length=500, null=True, blank=True)
+    country = models.CharField(max_length=60, null=True, blank=True)
     native = models.CharField(max_length=50)
     desired = models.CharField(max_length=50)
 
