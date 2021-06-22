@@ -39,11 +39,8 @@ def registration (request):
         else:
             raise (serializer.errors)
         user_id = User.objects.filter(username=account.username).values_list('id', flat=True)
-        print(x['native'])
         native = x['native'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
         desired = x['desired'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
-        print(type(native))
-        print(type(desired))
         data1['user_id'] = user_id[0]
         data1['name'] = x['name']
         data1['sex'] = x['sex']
@@ -135,10 +132,26 @@ class Password_update(UpdateAPIView):
 @permission_classes([IsAuthenticated])
 def profile_update (request):
     user = request.user
-    serializer = Profile(data=request.data)
+    data = request.data
+    profile_id = User_info.objects.filter(user_id=user).first()
+    data1 = {}
+    print(data['native'])
+    data1['user_id'] = data['user_id']
+    if len(data['name']) > 0:
+        data1['name'] = data['name']
+    if len(data['sex']) > 0:
+        data1['sex'] = data['sex']
+    if len(data['about']) > 0:
+        data1['about'] = data['about']
+    if len(data['native']) > 0:
+        data1['native'] = data['native'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
+    if len(data['desired']) > 0:
+        data1['desired'] = data['desired'].replace("'", '').replace("[", '').replace("]", '').replace('"', '')
+    serializer = Profile(profile_id,data=data1, partial=True)
     if serializer.is_valid():
-        serializer.save(user_id=user)
+        serializer.save()
     else:
-        return Response (serializer.errors)
+        print(serializer.errors)
+        return Response ({'errorMessage': serializer.errors})
     return Response ({'user_id': user.id, 'message': 'Your profile has been successfully updated'})
 
