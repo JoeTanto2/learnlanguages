@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.generics import UpdateAPIView
-from rest_framework.decorators import api_view, permission_classes,authentication_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from .serializer import Auth_user, Profile, UserCreation, PasswordUpdate
 from rest_framework import permissions
@@ -19,13 +19,13 @@ def registration (request):
     if request.method == "POST":
         x = request.POST
         if not x:
-            raise Http404("Data wasn't sent to the server")
+            raise Http404({'errorMessage': "Data wasn't sent to the server"})
         email_check = User.objects.filter(email=x['email'])
         username_check = User.objects.filter(username=x['username'])
         if len(email_check) > 0:
-            raise ValidationError ('your email already exists')
+            raise ValidationError ({"errorMessage": 'your email already exists'})
         if len(username_check) > 0:
-            raise ValidationError ('this username already exists')
+            raise ValidationError ({"errorMessage": 'this username already exists'})
         serializer = UserCreation(data=request.data)
         data = {}
         data1 = {}
@@ -35,8 +35,9 @@ def registration (request):
             data['email'] = account.email
             token = Token.objects.get(user=account).key
             data['token'] = token
+            data['id'] = account.id
         else:
-            data = serializer.errors
+            raise (serializer.errors)
         user_id = User.objects.filter(username=account.username).values_list('id', flat=True)
         data1['user_id'] = user_id[0]
         data1['name'] = x['name']
@@ -66,15 +67,19 @@ def user_profile (request, pk):
     for id in user:
         profile = User_info.objects.filter(user_id=id.id)
     serializer = Auth_user(user, many=True)
-    serializer1 = Profile(profile, many=True)
-    return Response ({'user': serializer.data,
+    if len(profile) > 0:
+        serializer1 = Profile(profile, many=True)
+        return Response ({'user': serializer.data,
                       'profile': serializer1.data})
+    return Response ({'user': serializer.data,
+                      'profile': "the profile fields are empty"
+                      })
+
 class Login (ObtainAuthToken):
     @csrf_exempt
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data['data'],
                                            context={'request': request})
-
         if serializer.is_valid(raise_exception=True):
             user = serializer.validated_data['user']
             token, created = Token.objects.get_or_create(user=user)
@@ -84,7 +89,7 @@ class Login (ObtainAuthToken):
                 'email': user.email
             })
         else:
-            return Response('Didnt work')
+            return ValidationError ({"errorMessage": 'Please make sure you have filled out all of the requuired fields'})
 
 
 @csrf_exempt
@@ -108,9 +113,14 @@ class Password_update(UpdateAPIView):
     authentication_classes = [TokenAuthentication]
     serializer_class = PasswordUpdate
     def update(self, request, *args, **kwargs):
+        user = self.request.user
+        password = self.request.data['data']
         serializer = self.get_serializer(data=request.data['data'])
         if serializer.is_valid(raise_exception=True):
-            user = serializer.save()
+            if not user.check_password(password['oldPassword']):
+                raise ValidationError({'errorMessage': "The old password you entered doesn't match our records"})
+            else:
+                user = serializer.save()
             return Response ({'user_id':user.id, 'username': user.username, 'message': 'Your password has been successfully updated'})
         else:
             return Response(serializer.errors)

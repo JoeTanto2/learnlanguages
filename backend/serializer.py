@@ -13,7 +13,6 @@ class Auth_user (serializers.ModelSerializer):
 class Profile (serializers.ModelSerializer):
     about = serializers.CharField(required=False)
     sex = serializers.CharField(required=False)
-    user_id = serializers.CharField(required=False)
     class Meta:
         model = User_info
         fields = '__all__'
@@ -38,19 +37,8 @@ from rest_framework import serializers
 
 class PasswordUpdate(serializers.Serializer):
     id = serializers.IntegerField(required=False)
-    #email = serializers.CharField(required=True)
     oldPassword = serializers.CharField(max_length=128, write_only=True, required=True)
     newPassword = serializers.CharField(max_length=128, write_only=True, required=True)
-
-    def validate_old_password(self, value):
-        user = self.context['request'].user
-        print(user)
-        #email = self.context['request'].user.email
-        if not user.check_password(value['data']):
-            raise serializers.ValidationError(
-                _("your old password doesn't match our reccords")
-            )
-        return value
 
     def validate(self, data):
         # email = self.context['request'].user.email

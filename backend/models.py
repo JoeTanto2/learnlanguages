@@ -19,3 +19,5 @@ class User_info (models.Model):
     country = models.CharField(max_length=60, blank=True)
     native = models.CharField(max_length=50)
     desired = models.CharField(max_length=50)
+
+
