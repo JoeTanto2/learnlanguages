@@ -4,6 +4,7 @@ from rest_framework.generics import UpdateAPIView
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from .serializer import Auth_user, Profile, UserCreation, PasswordUpdate
+from .models import Chat
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
@@ -135,7 +136,6 @@ def profile_update (request):
     data = request.data
     profile_id = User_info.objects.filter(user_id=user).first()
     data1 = {}
-    print(data['native'])
     data1['user_id'] = data['user_id']
     if len(data['name']) > 0:
         data1['name'] = data['name']
@@ -155,3 +155,10 @@ def profile_update (request):
         return Response ({'errorMessage': serializer.errors})
     return Response ({'user_id': user.id, 'message': 'Your profile has been successfully updated'})
 
+@api_view(['GET'])
+def chat (request, chat_id):
+    chat = Chat.objects.filter(id=chat_id)
+    if chat:
+        return Response({'Message' 'redirecting to the chat'})
+    else:
+        return Response({'errorMessage': 'chat with this id does not exist'})

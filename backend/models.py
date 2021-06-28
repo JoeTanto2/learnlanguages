@@ -20,4 +20,20 @@ class User_info (models.Model):
     native = models.CharField(max_length=50)
     desired = models.CharField(max_length=50)
 
+class Chat (models.Model):
+    participants = models.ManyToManyField(User, blank=True)
+    chat_name = models.CharField(max_length=150, blank=True)
 
+class ChatMessagesManager (models.Manager):
+    def messages(self, room):
+        text = ChatMessages.objects.filter(room=room).order_by("-timestamp")
+        return text
+
+
+class ChatMessages (models.Model):
+    participant = models.ForeignKey(User, on_delete=models.CASCADE)
+    room = models.ForeignKey(Chat, on_delete=models.CASCADE)
+    messages = models.CharField(max_length=500, unique=False, blank=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    texts = ChatMessagesManager()
