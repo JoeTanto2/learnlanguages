@@ -68,10 +68,9 @@ def index (request):
 def user_profile (request, pk):
     user = User.objects.filter(id=pk)
     for id in user:
-        profile = User_info.objects.filter(user_id=id.id)
+        profile = User_info.objects.filter(id=id.id)
     serializer = Auth_user(user, many=True)
-    print(profile)
-    if len(profile) > 0:
+    if profile:
         serializer1 = Profile(profile, many=True)
         return Response ({'user': serializer.data,
                       'profile': serializer1.data})
