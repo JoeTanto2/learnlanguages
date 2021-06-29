@@ -27,7 +27,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
     # Receive message from WebSocket
     async def receive(self, text_data):
         data = json.loads(text_data)
-        message = data['message']
         if self.scope['user'].id != None:
             pass
         else:
@@ -40,26 +39,42 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 pass
         if not self.scope['user'].id:
             await self.close()
-        # Send message to room group
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'chat_message',
-                'message': message,
-                'user_id': self.scope['user'].id,
-                'username': self.scope['user'].username
-            }
-        )
+        if 'message' in data.keys():
+            message = data['message']
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': message,
+                    'user_id': self.scope['user'].id,
+                    'username': self.scope['user'].username
+                }
+            )
+        else:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_message',
+                    'user_id': self.scope['user'].id,
+                    'username': self.scope['user'].username
+                }
+            )
 
 
     # Receive message from room group
     async def chat_message(self, event):
-        message = event['message']
         user_id = event['user_id']
         username = event['username']
-        # Send message to WebSocket
-        await self.send(text_data=json.dumps({
-            'message': message,
-            'user_id': user_id,
-            'username': username
-        }))
+        if 'message' in event.keys():
+            message = event['message']
+
+            await self.send(text_data=json.dumps({
+                'message': event['message'],
+                'user_id': user_id,
+                'username': username
+            }))
+        else:
+            await self.send(text_data=json.dumps({
+                'user_id': user_id,
+                'username': username
+            }))
