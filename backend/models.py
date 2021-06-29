@@ -12,7 +12,7 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
         Token.objects.create(user=instance)
 
 class User_info (models.Model):
-    user_id = models.ForeignKey(User, related_name='info', on_delete=models.CASCADE)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100, blank=True)
     sex = models.CharField(max_length=50, blank=True, null=True)
     about = models.CharField(max_length=500, null=True, blank=True)
