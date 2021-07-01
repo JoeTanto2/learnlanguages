@@ -1,9 +1,6 @@
-from django.contrib import admin
-from django.urls import path, include, re_path
-from . import consumers
-from .views import user_profile, registration, index, search, logout, Login, Password_update, profile_update, chat
-from django.views.generic import TemplateView
-from rest_framework.authtoken import views
+from django.urls import path
+from .views import (user_profile, registration, index, search, logout, Login,
+Password_update, profile_update, chat, room_create, private_room_create)
 
 urlpatterns = [
     path('', index, name='index'),
@@ -14,5 +11,7 @@ urlpatterns = [
     path('logout/', logout, name='logout'),
     path('password_update/', Password_update.as_view()),
     path('profile_update/', profile_update),
-    path('<str:chat_id>/', chat)
+    path('room_create/', room_create),
+    path('private_chat/', private_room_create),
+    path('chat/', chat),
 ]

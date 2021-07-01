@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import User_info
+from .models import User_info, ChatMessages
 
 from django.contrib.auth import password_validation
 
@@ -56,5 +56,4 @@ class PasswordUpdate(serializers.Serializer):
         user.set_password(password)
         user.save()
         return user
-
 

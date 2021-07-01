@@ -4,12 +4,11 @@ from rest_framework.generics import UpdateAPIView
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from .serializer import Auth_user, Profile, UserCreation, PasswordUpdate
-from .models import Chat
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
-from .models import User_info
+from .models import User_info, Chat, PrivateChatRoom, ChatRoom
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
 from rest_framework.exceptions import ValidationError, ParseError
@@ -63,12 +62,13 @@ def index (request):
     serializer = Auth_user(object, many=True)
     return Response (serializer.data)
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_profile (request, pk):
     user = User.objects.filter(id=pk)
     for id in user:
-        profile = User_info.objects.filter(id=id.id)
+        profile = User_info.objects.filter(user_id=id.id)
     serializer = Auth_user(user, many=True)
     if profile:
         serializer1 = Profile(profile, many=True)
@@ -101,7 +101,7 @@ class Login (ObtainAuthToken):
 def search (request):
     user = request.user.id
     q = request.POST
-    object = User_info.objects.filter(native_language=q['q']).exclude(user_id=user)
+    object = User_info.objects.filter(native=q['q']).exclude(user_id=user)
     serializer = Profile(object, many=True)
     return Response (serializer.data)
 
@@ -155,9 +155,49 @@ def profile_update (request):
     return Response ({'user_id': user.id, 'message': 'Your profile has been successfully updated'})
 
 @api_view(['GET'])
-def chat (request, chat_id):
-    chat = Chat.objects.filter(id=chat_id)
-    if chat:
-        return Response({'Message' 'redirecting to the chat'})
+def chat(request):
+    user = request.user
+    public = ChatRoom.objects.filter(users=user)
+    private = PrivateChatRoom.objects.filter(user=user)
+    private1 = PrivateChatRoom.objects.filter(user1=user)
+    dict = {}
+    list_to_send = []
+    if public:
+        for i in public:
+            dict["id"] = i.chat_id.id
+            dict["chat_name"] = i.chat_id.chat_name
+            list_to_send.append(dict)
+    if private:
+        for i in private:
+            dict["id"] = i.room.id
+            dict["chat_name"] = "private chat"
+            list_to_send.append(dict)
+    if private1:
+        for i in private1:
+            dict["id"] = i.room.id
+            dict["chat_name"] = "private chat"
+            list_to_send.append(dict)
+    return Response ({"chats": list_to_send})
+
+@api_view(["POST"])
+def room_create(request):
+    data = request.POST
+    chat_name = Chat.objects.filter(chat_name__iexact=data['chat_name'])
+    if chat_name:
+        return Response({"errorMessage": 'Chat with this name already exists'})
+    chat = Chat.objects.create(chat_name=data['chat_name'], language=data['language'])
+    return Response({'respone': f'Your chat {chat.chat_name} has been successfully created'})
+
+@api_view(["POST"])
+def private_room_create(request):
+    data = request.POST
+    chat = PrivateChatRoom.objects.filter(user=data['user_id']).filter(user1=data['user1_id'])
+    if not chat:
+        chat_create = Chat.objects.create(is_private=True)
+        user = User.objects.get(id=data['user_id'])
+        user1 = User.objects.get(id=data['user1_id'])
+        create_private_room = PrivateChatRoom.objects.create(room=chat_create, user=user, user1=user1)
+        return Response({"chat_id": chat_create.id})
     else:
-        return Response({'errorMessage': 'chat with this id does not exist'})
+        chat_id = chat[0].room.id
+        return Response ({"chat_id": chat_id})

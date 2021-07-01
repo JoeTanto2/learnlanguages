@@ -1,9 +1,8 @@
 from django.contrib import admin
-from .models import User_info, ChatMessages, Chat
+from .models import User_info, Chat, ChatRoom, ChatMessages, PrivateChatRoom
 from rest_framework.authtoken.admin import TokenAdmin
 from django.core.paginator import Paginator
 from django.core.cache import cache
-from .models import Chat, ChatMessages
 
 TokenAdmin.raw_id_fields = ['user']
 admin.site.register(User_info)
@@ -33,10 +32,10 @@ class Caching(Paginator):
     count = property(_get_count)
 
 class ChatMessagesAdmin(admin.ModelAdmin):
-    list_filter = ['room', 'participant', 'timestamp']
-    list_display = ['room', 'participant', 'timestamp', 'messages']
-    search_fields = ['room__name', 'participant__username', 'timestamp', 'messages']
-    readonly_fields = ['room', 'participant', 'timestamp', 'id']
+    list_filter = ['room', 'sent_from', 'timestamp']
+    list_display = ['room', 'sent_from', 'sent_to', 'timestamp', 'messages']
+    search_fields = ['room__name', 'sent_from__username', 'timestamp', 'messages']
+    # readonly_fields = ['room', 'timestamp', 'id']
 
     show_full_result_count = False
     paginator = Caching
@@ -47,3 +46,7 @@ class ChatMessagesAdmin(admin.ModelAdmin):
 admin.site.register(Chat, ChatAdmin)
 
 admin.site.register(ChatMessages, ChatMessagesAdmin)
+
+admin.site.register(ChatRoom)
+admin.site.register(PrivateChatRoom)
+
