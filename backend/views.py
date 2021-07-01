@@ -12,6 +12,7 @@ from .models import User_info, Chat, PrivateChatRoom, ChatRoom
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
 from rest_framework.exceptions import ValidationError, ParseError
+import json
 
 
 @api_view(["POST"])
@@ -181,11 +182,12 @@ def chat(request):
 
 @api_view(["POST"])
 def room_create(request):
-    data = request.POST['data']
-    chat_name = Chat.objects.filter(chat_name__iexact=data['chat_name'])
+    info = request.data['data']
+    chat_name = Chat.objects.filter(chat_name__iexact=info['chat_name'])
     if chat_name:
         return Response({"errorMessage": 'Chat with this name already exists'})
-    chat = Chat.objects.create(chat_name=data['chat_name'], language=data['language'])
+    chat = Chat.objects.create(chat_name=info['chat_name'], language=info['language'])
+    #change respone to response
     return Response({'respone': f'Your chat {chat.chat_name} has been successfully created'})
 
 @api_view(["POST"])
