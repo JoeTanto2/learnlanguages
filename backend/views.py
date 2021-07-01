@@ -181,7 +181,7 @@ def chat(request):
 
 @api_view(["POST"])
 def room_create(request):
-    data = request.POST
+    data = request.POST['data']
     chat_name = Chat.objects.filter(chat_name__iexact=data['chat_name'])
     if chat_name:
         return Response({"errorMessage": 'Chat with this name already exists'})
