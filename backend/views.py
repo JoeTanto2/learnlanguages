@@ -192,7 +192,7 @@ def room_create(request):
 
 @api_view(["POST"])
 def private_room_create(request):
-    data = request.POST
+    data = request.data['data']
     chat = PrivateChatRoom.objects.filter(user=data['user_id']).filter(user1=data['user1_id'])
     if not chat:
         chat_create = Chat.objects.create(is_private=True)
