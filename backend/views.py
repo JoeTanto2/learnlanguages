@@ -161,20 +161,23 @@ def chat(request):
     public = ChatRoom.objects.filter(users=user)
     private = PrivateChatRoom.objects.filter(user=user)
     private1 = PrivateChatRoom.objects.filter(user1=user)
-    dict = {}
     list_to_send = []
+
     if public:
         for i in public:
+            dict = {}
             dict["id"] = i.chat_id.id
             dict["chat_name"] = i.chat_id.chat_name
             list_to_send.append(dict)
     if private:
         for i in private:
+            dict = {}
             dict["id"] = i.room.id
             dict["chat_name"] = "private chat"
             list_to_send.append(dict)
     if private1:
         for i in private1:
+            dict = {}
             dict["id"] = i.room.id
             dict["chat_name"] = "private chat"
             list_to_send.append(dict)
