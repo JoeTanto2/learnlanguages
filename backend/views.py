@@ -159,7 +159,6 @@ def chat(request):
     private = PrivateChatRoom.objects.filter(user=user)
     private1 = PrivateChatRoom.objects.filter(user1=user)
     list_to_send = []
-
     if public:
         for i in public:
             dict = {}
@@ -217,5 +216,6 @@ def get_chat_messages(request):
     except EmptyPage:
         raise ValidationError ({"errorMessage": "There is no more messages to display."})
     to_send = serialize('json', page)
+    print(to_send)
     return Response({'messages': to_send})
 

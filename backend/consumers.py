@@ -152,6 +152,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 message = event['message']
 
                 await self.send(text_data=json.dumps({
+                    'type': 'chat_message',
                     'message': event['message'],
                     'user_id': user_id,
                     'message_id': event['message_id'],
