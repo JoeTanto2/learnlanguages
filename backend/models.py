@@ -26,8 +26,8 @@ class User_info (models.Model):
 class Chat (models.Model):
     chat_name = models.CharField(max_length=150, blank=True, unique=True, null=True)
     language = models.CharField(max_length=50, null=True, blank=True)
+    participants = models.ManyToManyField(User, blank=True, null=True)
     is_private = models.BooleanField(default=False, blank=True)
-
     def __str__(self):
         if self.chat_name:
             return ''.join(self.chat_name)

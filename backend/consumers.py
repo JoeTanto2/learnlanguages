@@ -6,7 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework.response import Response
 from .models import ChatMessages, Chat, ChatRoom, PrivateChatRoom
 from django.core.serializers import serialize
-from .helper import chat_room_query, private_chat_ids
+from .helper import chat_room_query, private_chat_ids, check_if_in_chat, date_to_string
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -22,12 +22,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         # Leave room group
+        # print('hi')
         chat = await sync_to_async(Chat.objects.get, thread_sensitive=True)(id=int(self.room_name))
         if chat.is_private == False:
-            room_to_remove_from = await sync_to_async(ChatRoom.objects.get)(chat_id=chat)
-            await sync_to_async(room_to_remove_from.users.remove, thread_sensitive=True)(self.scope['user'])
-            # user = await sync_to_async(ChatRoom.objects.get, thread_sensitive=True)(users=self.scope['user'])
-            users = await (chat_room_query(self.room_name))
+            await sync_to_async(chat.participants.remove, thread_sensitive=True)(self.scope['user'])
+        # user = await sync_to_async(ChatRoom.objects.get, thread_sensitive=True)(users=self.scope['user'])
+            users = await (chat_room_query(int(self.room_name)))
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -55,7 +55,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 pass
         if not self.scope['user'].id:
             await self.close()
-        room = await sync_to_async(Chat.objects.get, thread_sensitive=True)(id=data['chat_id'])
+        room = await sync_to_async(Chat.objects.get, thread_sensitive=True)(id=int(self.room_name))
         if room.is_private == False:
             try:
                 check_for_room = await sync_to_async(ChatRoom.objects.get)(chat_id=room)
@@ -63,8 +63,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 check_for_room = None
             if check_for_room == None:
                 add_participant = await sync_to_async(ChatRoom.objects.create, thread_sensitive=True)(chat_id=room)
-                await sync_to_async(add_participant.users.add, thread_sensitive=True)(self.scope['user'])
-                users = await check_for_room(room)
+                participants = await sync_to_async(room.participants.add, thread_sensitive=True)(self.scope['user'])
+                check = await check_if_in_chat(room.id, self.scope['user'])
+                #check_if_add = await sync_to_async(add_participant.users.get, thread_sensitive=True)()
+                if check == 0:
+                    await sync_to_async(add_participant.users.add, thread_sensitive=True)(self.scope['user'])
+                    print('hola')
+                users = await chat_room_query(room.id)
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
@@ -73,8 +78,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
             else:
-                await sync_to_async(check_for_room.users.add, thread_sensitive=True)(self.scope['user'])
-                users = await chat_room_query(room)
+                check = await check_if_in_chat (room.id, self.scope['user'])
+                if check == 0:
+                    await sync_to_async(check_for_room.users.add, thread_sensitive=True)(self.scope['user'])
+                else:
+                    print('hola')
+                await sync_to_async(room.participants.add)(self.scope['user'])
+                users = await chat_room_query(room.id)
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
@@ -84,14 +94,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
             if 'message' in data.keys():
                 message = data['message']
-                sent_from = await sync_to_async(User.objects.get, thread_sensitive=True)(id=data['sent_from'])
+                sent_from = await sync_to_async(User.objects.get, thread_sensitive=True)(id=self.scope['user'].id)
                 message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
                 sent_from=sent_from, sent_to=data['sent_to'], messages=message)
+                timestamp = await date_to_string(message_object.timestamp)
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
                         'type': 'chat_message',
                         'message': message,
+                        'message_id': message_object.id,
+                        'timestamp': timestamp,
                         'user_id': self.scope['user'].id,
                         'username': self.scope['user'].username
                     }
@@ -107,16 +120,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
         else:
             ids = await (private_chat_ids(room.id))
+            print(ids)
             if str(self.scope['user'].id) not in ids:
                 await self.close()
             if 'message' in data.keys():
                 message = data['message']
                 message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room, sent_from=self.scope['user'], messages=message)
+                timestamp = await date_to_string(message_object.timestamp)
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
                         'type': 'chat_message',
                         'message': message,
+                        'message_id': message_object.id,
+                        'timestamp': timestamp,
                         'user_id': self.scope['user'].id,
                         'username': self.scope['user'].username
                     }
@@ -137,7 +154,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({
                     'message': event['message'],
                     'user_id': user_id,
-                    'username': username
+                    'message_id': event['message_id'],
+                    'username': username,
+                    'timestamp': event['timestamp']
                 }))
             else:
                 await self.send(text_data=json.dumps({

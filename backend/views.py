@@ -8,11 +8,13 @@ from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
-from .models import User_info, Chat, PrivateChatRoom, ChatRoom
+from .models import User_info, Chat, PrivateChatRoom, ChatRoom, ChatMessages, ChatMessagesManager
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
 from rest_framework.exceptions import ValidationError, ParseError
+from django.core.paginator import Paginator, EmptyPage
 import json
+from django.core.serializers import serialize
 
 
 @api_view(["POST"])
@@ -106,11 +108,6 @@ def search (request):
     serializer = Profile(object, many=True)
     return Response (serializer.data)
 
-@api_view(["GET"])
-def logout(request):
-    # simply delete the token to force a login
-    request.user.auth_token.delete()
-    return Response("You have been successfully logged out.")
 
 class Password_update(UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -166,20 +163,23 @@ def chat(request):
     if public:
         for i in public:
             dict = {}
-            dict["id"] = i.chat_id.id
+            dict["chat_id"] = i.chat_id.id
             dict["chat_name"] = i.chat_id.chat_name
+            dict["chat_type"] = "public"
             list_to_send.append(dict)
     if private:
         for i in private:
             dict = {}
-            dict["id"] = i.room.id
-            dict["chat_name"] = "private chat"
+            dict["chat_id"] = i.room.id
+            dict["chat_name"] = i.user1.username
+            dict["chat_type"] = "private"
             list_to_send.append(dict)
     if private1:
         for i in private1:
             dict = {}
-            dict["id"] = i.room.id
-            dict["chat_name"] = "private chat"
+            dict["chat_id"] = i.room.id
+            dict["chat_name"] = i.user.username
+            dict["chat_type"] = "private"
             list_to_send.append(dict)
     return Response ({"chats": list_to_send})
 
@@ -190,8 +190,7 @@ def room_create(request):
     if chat_name:
         return Response({"errorMessage": 'Chat with this name already exists'})
     chat = Chat.objects.create(chat_name=info['chat_name'], language=info['language'])
-    #change respone to response
-    return Response({'respone': f'Your chat {chat.chat_name} has been successfully created'})
+    return Response({'response': f'Your chat {chat.chat_name} has been successfully created'})
 
 @api_view(["POST"])
 def private_room_create(request):
@@ -206,3 +205,17 @@ def private_room_create(request):
     else:
         chat_id = chat[0].room.id
         return Response ({"chat_id": chat_id})
+
+@api_view(["GET"])
+def get_chat_messages(request):
+    info = request.query_params
+    id = info['id']
+    messages = ChatMessagesManager.messages(ChatMessagesManager(), id)
+    paginator = Paginator(messages, 20)
+    try:
+        page = paginator.page(info['page'])
+    except EmptyPage:
+        raise ValidationError ({"errorMessage": "There is no more messages to display."})
+    to_send = serialize('json', page)
+    return Response({'messages': to_send})
+
