@@ -1,3 +1,4 @@
+import django.contrib.auth.models
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -7,6 +8,12 @@ from rest_framework.authtoken.models import Token
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 
+model = User
+class Meta:
+    unique_together = [['username', 'id']]
+
+def natural_key(self):
+    return (self.username, self.id)
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
@@ -57,6 +64,9 @@ class ChatMessagesManager (models.Manager):
     def messages(self, room):
         text = ChatMessages.objects.filter(room=room).order_by("timestamp")
         return text
+    def call (self):
+        o = ChatMessages.natural_key(self)
+
 
 class ChatMessages (models.Model):
     room = models.ForeignKey(Chat, on_delete=models.CASCADE)
@@ -71,7 +81,7 @@ class ChatMessages (models.Model):
     def __str__(self):
         return ''.join(self.sent_from.username)
 
-    @property
     def natural_key(self):
-        return f'username {self.sent_from.username} + id{self.sent_from.id}'
+        return (self.sent_from,) + self.sent_from.natural_key()
 
+    natural_key.dependencies = ['django.contrib.auth.models.User']
