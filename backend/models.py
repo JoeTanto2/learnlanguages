@@ -62,7 +62,7 @@ class ChatRoom (models.Model):
 
 class ChatMessagesManager (models.Manager):
     def messages(self, room):
-        text = ChatMessages.objects.filter(room=room).order_by("timestamp")
+        text = ChatMessages.objects.filter(room=room).order_by("-timestamp")
         return text
     def call (self):
         o = ChatMessages.natural_key(self)
