@@ -125,6 +125,7 @@ class Password_update(UpdateAPIView):
             return Response ({'user_id':user.id, 'username': user.username, 'message': 'Your password has been successfully updated'})
         else:
             return Response(serializer.errors)
+
 @csrf_exempt
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
@@ -153,6 +154,7 @@ def profile_update (request):
     return Response ({'user_id': user.id, 'message': 'Your profile has been successfully updated'})
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def chat(request):
     user = request.user
     public = ChatRoom.objects.filter(users=user)
@@ -168,30 +170,40 @@ def chat(request):
             list_to_send.append(dict)
     if private:
         for i in private:
-            dict = {}
-            dict["chat_id"] = i.room.id
-            dict["chat_name"] = i.user1.username
-            dict["chat_type"] = "private"
-            list_to_send.append(dict)
+            check = i.room.participants.filter(chat__participants=user)
+            if check:
+                dict = {}
+                dict["chat_id"] = i.room.id
+                dict["chat_name"] = i.user1.username
+                dict["chat_type"] = "private"
+                list_to_send.append(dict)
     if private1:
         for i in private1:
-            dict = {}
-            dict["chat_id"] = i.room.id
-            dict["chat_name"] = i.user.username
-            dict["chat_type"] = "private"
-            list_to_send.append(dict)
+            check = i.room.participants.filter(chat__participants=user)
+            if check:
+                dict = {}
+                dict["chat_id"] = i.room.id
+                dict["chat_name"] = i.user.username
+                dict["chat_type"] = "private"
+                list_to_send.append(dict)
     return Response ({"chats": list_to_send})
 
+@csrf_exempt
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def room_create(request):
     info = request.data['data']
+    user = request.user
     chat_name = Chat.objects.filter(chat_name__iexact=info['chat_name'])
     if chat_name:
         return Response({"errorMessage": 'Chat with this name already exists'})
     chat = Chat.objects.create(chat_name=info['chat_name'], language=info['language'])
+    chat_room = ChatRoom.objects.create(chat_id=chat)
+    chat_room.users.add(user)
     return Response({'response': f'Your chat {chat.chat_name} has been successfully created'})
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def private_room_create(request):
     data = request.data['data']
     chat = PrivateChatRoom.objects.filter(user=data['user_id']).filter(user1=data['user1_id'])
@@ -200,12 +212,14 @@ def private_room_create(request):
         user = User.objects.get(id=data['user_id'])
         user1 = User.objects.get(id=data['user1_id'])
         create_private_room = PrivateChatRoom.objects.create(room=chat_create, user=user, user1=user1)
+        add_to_participants = chat_create.participants.add(user, user1)
         return Response({"chat_id": chat_create.id})
     else:
         chat_id = chat[0].room.id
         return Response ({"chat_id": chat_id})
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def get_chat_messages(request):
     info = request.query_params
     id = info['id']
@@ -215,7 +229,22 @@ def get_chat_messages(request):
         page = paginator.page(info['page'])
     except EmptyPage:
         raise ValidationError ({"errorMessage": "There is no more messages to display."})
-    to_send = serialize('json', page)
-    print(to_send)
+    to_send = serialize('json', page, use_natural_foreign_keys=True)
     return Response({'messages': to_send})
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def leave_chat_room (request):
+    info = request.query_params
+    user = request.user
+    chat = Chat.objects.get(id=info['chat_id'])
+    if chat.is_private == False:
+        chat_to_leave = ChatRoom.objects.get(chat_id=info['chat_id'])
+        chat_to_leave.users.remove(user)
+        return Response ({"message": "Success"})
+    else:
+        chat.participants.remove(user)
+        return Response ({"message": "Success"})
+
+
 

@@ -65,10 +65,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 add_participant = await sync_to_async(ChatRoom.objects.create, thread_sensitive=True)(chat_id=room)
                 participants = await sync_to_async(room.participants.add, thread_sensitive=True)(self.scope['user'])
                 check = await check_if_in_chat(room.id, self.scope['user'])
+                print(check)
                 #check_if_add = await sync_to_async(add_participant.users.get, thread_sensitive=True)()
                 if check == 0:
                     await sync_to_async(add_participant.users.add, thread_sensitive=True)(self.scope['user'])
-                    print('hola')
                 users = await chat_room_query(room.id)
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -81,8 +81,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 check = await check_if_in_chat (room.id, self.scope['user'])
                 if check == 0:
                     await sync_to_async(check_for_room.users.add, thread_sensitive=True)(self.scope['user'])
-                else:
-                    print('hola')
                 await sync_to_async(room.participants.add)(self.scope['user'])
                 users = await chat_room_query(room.id)
                 await self.channel_layer.group_send(
@@ -120,12 +118,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
         else:
             ids = await (private_chat_ids(room.id))
-            print(ids)
             if str(self.scope['user'].id) not in ids:
                 await self.close()
             if 'message' in data.keys():
                 message = data['message']
-                message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room, sent_from=self.scope['user'], messages=message)
+                message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
+                sent_from=self.scope['user'], messages=message)
                 timestamp = await date_to_string(message_object.timestamp)
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -143,6 +141,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if 'users' in event.keys():
             users = event['users']
             await self.send(text_data=json.dumps({
+                'type': "users",
                 'users': users
             }))
         if 'user_id' and 'username' in event.keys():

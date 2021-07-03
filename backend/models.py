@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
@@ -28,6 +30,8 @@ class Chat (models.Model):
     language = models.CharField(max_length=50, null=True, blank=True)
     participants = models.ManyToManyField(User, blank=True, null=True)
     is_private = models.BooleanField(default=False, blank=True)
+
+    objects = models.Manager()
     def __str__(self):
         if self.chat_name:
             return ''.join(self.chat_name)
@@ -39,6 +43,7 @@ class PrivateChatRoom (models.Model):
     user = models.ForeignKey(User, related_name='user', null=True, on_delete=models.SET_NULL)
     user1 = models.ForeignKey(User, related_name='user1', null=True, on_delete=models.SET_NULL)
     private = models.BooleanField(default=True)
+    remove = models.BooleanField(default=False)
 
 class ChatRoom (models.Model):
     chat_id = models.OneToOneField(Chat, on_delete=models.CASCADE)
@@ -50,7 +55,7 @@ class ChatRoom (models.Model):
 
 class ChatMessagesManager (models.Manager):
     def messages(self, room):
-        text = ChatMessages.objects.filter(room=room).order_by("-timestamp")
+        text = ChatMessages.objects.filter(room=room).order_by("timestamp")
         return text
 
 class ChatMessages (models.Model):
@@ -66,4 +71,7 @@ class ChatMessages (models.Model):
     def __str__(self):
         return ''.join(self.sent_from.username)
 
+    @property
+    def natural_key(self):
+        return f'username {self.sent_from.username} + id{self.sent_from.id}'
 

@@ -35,6 +35,7 @@ def private_chat_ids (room):
 @sync_to_async
 def check_if_in_chat (room, user_id):
     user = ChatRoom.objects.filter(chat_id=room, users=user_id)
+    print(user)
     if user:
         return 1
     else:
@@ -43,8 +44,9 @@ def check_if_in_chat (room, user_id):
 @sync_to_async
 def date_to_string (object):
     if isinstance(object, (datetime, date)):
-        return object.strftime("%Y-%m-%d %H:%M:%S")
+        return object.isoformat()
     raise TypeError ("Type %s not serializable" % type(object))
+
 
 # def pull_messages(chat_id, page):
 #     messages = ChatMessages.objects.filter(room=chat_id).order_by('-timestamp')
