@@ -3,12 +3,12 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.generics import UpdateAPIView
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
-from .serializer import Auth_user, Profile, UserCreation, PasswordUpdate
+from .serializer import Auth_user, Profile, UserCreation, PasswordUpdate, Picture
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
-from .models import User_info, Chat, PrivateChatRoom, ChatRoom, ChatMessages, ChatMessagesManager
+from .models import User_info, Chat, PrivateChatRoom, ChatRoom, ChatMessages, ChatMessagesManager, ProfilePicture
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
 from rest_framework.exceptions import ValidationError, ParseError
@@ -55,6 +55,12 @@ def registration (request):
             serializer1.save()
         else:
             print(serializer1.errors)
+        if request.FILES != 0:
+            serializer2 = Picture(data=user_id, files=request.FILES)
+            if serializer2.is_valid():
+                serializer2.save()
+            else:
+                raise ValidationError(serializer2.errors)
         return Response(data)
 
 
@@ -131,6 +137,13 @@ class Password_update(UpdateAPIView):
 @permission_classes([IsAuthenticated])
 def profile_update (request):
     user = request.user
+    if request.FILES != 0:
+        print('hi')
+        avatar = request.FILES['avatar']
+        picture = ProfilePicture.objects.filter(user=user)
+        print(picture)
+        picture.update(picture=avatar)
+        return Response('everything worked')
     data = request.data
     profile_id = User_info.objects.filter(user_id=user).first()
     data1 = {}
@@ -248,6 +261,8 @@ def leave_chat_room (request):
     else:
         chat.participants.remove(user)
         return Response ({"message": "Success"})
+
+
 
 
 

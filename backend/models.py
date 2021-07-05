@@ -35,7 +35,7 @@ class User_info (models.Model):
 class Chat (models.Model):
     chat_name = models.CharField(max_length=150, blank=True, unique=True, null=True)
     language = models.CharField(max_length=50, null=True, blank=True)
-    participants = models.ManyToManyField(User, blank=True, null=True)
+    participants = models.ManyToManyField(User, blank=True)
     is_private = models.BooleanField(default=False, blank=True)
 
     objects = models.Manager()
@@ -85,3 +85,13 @@ class ChatMessages (models.Model):
         return (self.sent_from,) + self.sent_from.natural_key()
 
     natural_key.dependencies = ['django.contrib.auth.models.User']
+
+class ProfilePicture (models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    picture = models.ImageField()
+
+    def __str__(self):
+        return f'{self.user.username}'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)

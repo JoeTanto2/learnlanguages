@@ -6,7 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework.response import Response
 from .models import ChatMessages, Chat, ChatRoom, PrivateChatRoom
 from django.core.serializers import serialize
-from .helper import chat_room_query, private_chat_ids, check_if_in_chat, date_to_string
+from .helper import chat_room_query, private_chat_ids, check_if_in_chat, date_to_string, check_if_user, update_message
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -90,6 +90,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "users": users
                     }
                 )
+            if 'type' in data.keys():
+                type = data['type']
+                if type == 'message:delete':
+                    message_to_delete = await sync_to_async(ChatMessages.objects.get)(id=data['message_id'])
+                    check = await (check_if_user(message_to_delete, self.scope['user']))
+                    if check == 1:
+                        await sync_to_async(message_to_delete.delete)()
+                    else:
+                       await self.close()
+                if type == "message:edit":
+                    message_to_edit = await sync_to_async(ChatMessages.objects.filter, thread_sensitive=True)(id=data['message_id'])
+                    check = await (check_if_user(message_to_edit, self.scope['user']))
+                    if check == 1:
+                        response = await update_message(message_to_edit, data['message_edit'])
+                        if response == 0:
+                            pass
+                        else:
+                            await self.close()
+                    else:
+                        await self.close()
+
+                    #send message of success
             if 'message' in data.keys():
                 message = data['message']
                 sent_from = await sync_to_async(User.objects.get, thread_sensitive=True)(id=self.scope['user'].id)
@@ -117,6 +139,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
         else:
+            if 'type' in data.keys():
+                if data['type'] == 'message:delete':
+                    message_to_delete = await sync_to_async(ChatMessages.objects.get)(id=data['message_id'])
+                    if message_to_delete.sent_from == self.scope['user'].id:
+                        await sync_to_async(message_to_delete.delete)()
+                if data['type'] == 'message:edit':
+                    message_to_edit = await sync_to_async(ChatMessages.objects.get)(id=data['message_id'])
+                    if message_to_edit.sent_from == self.scope['user']:
+                        await sync_to_async(message_to_edit.update)(messages=data['message_edit'])
+                        #send message confirmation
+                    else:
+                        print('doesnt work')
             ids = await (private_chat_ids(room.id))
             if str(self.scope['user'].id) not in ids:
                 await self.close()

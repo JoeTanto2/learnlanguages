@@ -47,7 +47,17 @@ def date_to_string (object):
         return object.isoformat()
     raise TypeError ("Type %s not serializable" % type(object))
 
+@sync_to_async
+def check_if_user (message, user_id):
+    if message[0].sent_from == user_id:
+        return 1
+    else:
+        return 0
 
+@sync_to_async
+def update_message (object, message):
+    object.update(messages=message)
+    return 0
 # def pull_messages(chat_id, page):
 #     messages = ChatMessages.objects.filter(room=chat_id).order_by('-timestamp')
 #     paginator = Paginator(messages, 2)

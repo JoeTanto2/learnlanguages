@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import User_info, ChatMessages
+from .models import User_info, ChatMessages, ProfilePicture
 
 from django.contrib.auth import password_validation
 
@@ -57,3 +57,7 @@ class PasswordUpdate(serializers.Serializer):
         user.save()
         return user
 
+class Picture (serializers.ModelSerializer):
+    class Meta:
+        model = ProfilePicture
+        fields = '__all__'
