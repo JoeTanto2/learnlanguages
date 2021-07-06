@@ -55,11 +55,6 @@ def registration (request):
             serializer1.save()
         else:
             print(serializer1.errors)
-        serializer2 = Picture(data=user_id, files=request.FILES)
-        if serializer2.is_valid():
-            serializer2.save()
-        else:
-            raise ValidationError(serializer2.errors)
         if request.FILES['avatar'] != 0:
             avatar = request.FILES['avatar']
             user = User.objects.get(username=account.username)
@@ -219,6 +214,7 @@ def room_create(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def private_room_create(request):
+    user=request.user
     data = request.data['data']
     chat = PrivateChatRoom.objects.filter(user=data['user_id']).filter(user1=data['user1_id'])
     if not chat:
@@ -229,6 +225,8 @@ def private_room_create(request):
         add_to_participants = chat_create.participants.add(user, user1)
         return Response({"chat_id": chat_create.id})
     else:
+        chat_participants = Chat.objects.filter(id=chat[0].room.id)
+        chat_participants.participants.add(user)
         chat_id = chat[0].room.id
         return Response ({"chat_id": chat_id})
 

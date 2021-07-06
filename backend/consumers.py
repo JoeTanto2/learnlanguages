@@ -22,7 +22,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         # Leave room group
-        # print('hi')
         chat = await sync_to_async(Chat.objects.get, thread_sensitive=True)(id=int(self.room_name))
         if chat.is_private == False:
             await sync_to_async(chat.participants.remove, thread_sensitive=True)(self.scope['user'])
