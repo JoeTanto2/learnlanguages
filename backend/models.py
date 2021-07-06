@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
+import os
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 
@@ -91,7 +92,29 @@ class ProfilePicture (models.Model):
     picture = models.ImageField(upload_to='avatar/')
 
     def __str__(self):
-        return f'{self.user.username}'
+        return f'{self.picture}'
+
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+
+    # def delete(self, *args, **kwargs):
+    #     self.picture.delete(save=False)
+    #     super().delete()
+
+@receiver(models.signals.post_delete, sender=ProfilePicture)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    if instance.picture:
+        instance.picture.delete(save=False)  ## use for aws s3
+            # if os.path.isfile(instance.image.path): ## use this in development
+            #     os.remove(instance.image.path)
+
+@receiver(models.signals.pre_save, sender=ProfilePicture)
+def delete_old_file (sender, instance, **kwargs):
+    try:
+        old_instance = ProfilePicture.objects.get(id=instance.id)
+    except old_instance.DoesNotExist:
+        return None
+    old_instance.picture.delete(save=False)
+
+

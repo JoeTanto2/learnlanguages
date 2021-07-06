@@ -92,21 +92,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
             if 'type' in data.keys():
                 type = data['type']
-                if type == 'message:delete':
-                    message_to_delete = await sync_to_async(ChatMessages.objects.get)(id=data['message_id'])
+                if type == 'chat_message:delete':
+                    message_to_delete = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
                     check = await (check_if_user(message_to_delete, self.scope['user']))
                     if check == 1:
                         await sync_to_async(message_to_delete.delete)()
                         await self.channel_layer.group_send(
                             self.room_group_name,
                             {
-                                'type': 'chat_message:delete',
+                                'type': 'message_delete',
                                 'message_id': data['message_id']
                             }
                         )
                     else:
                        await self.close()
-                if type == "message:edit":
+                if type == "chat_message:edit":
                     message_to_edit = await sync_to_async(ChatMessages.objects.filter, thread_sensitive=True)(id=data['message_id'])
                     check = await (check_if_user(message_to_edit, self.scope['user']))
                     if check == 1:
@@ -115,7 +115,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             await self.channel_layer.group_send(
                                 self.room_group_name,
                                 {
-                                    'type': 'chat_message:edit',
+                                    'type': 'message_edit',
                                     'message_id': data['message_id'],
                                     'message_edit': data['message_edit']
                                 }
@@ -127,7 +127,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             if 'message' in data.keys():
                 message = data['message']
-                sent_from = await sync_to_async(User.objects.get, thread_sensitive=True)(id=self.scope['user'].id)
+                sent_from = await sync_to_async(User.objects.filter, thread_sensitive=True)(id=self.scope['user'].id)
                 message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
                 sent_from=sent_from, sent_to=data['sent_to'], messages=message)
                 timestamp = await date_to_string(message_object.timestamp)
@@ -153,25 +153,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
         else:
             if 'type' in data.keys():
-                if data['type'] == 'message:delete':
-                    message_to_delete = await sync_to_async(ChatMessages.objects.get)(id=data['message_id'])
-                    if message_to_delete.sent_from == self.scope['user'].id:
+                if data['type'] == 'chat_message:delete':
+                    message_to_delete = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
+                    check = await (check_if_user(message_to_delete, self.scope['user']))
+                    if check == 1:
                         await sync_to_async(message_to_delete.delete)()
                         await self.channel_layer.group_send(
                             self.room_group_name,
                             {
-                                'type': 'chat_message:delete',
+                                'type': 'message_delete',
                                 'message_id': data['message_id']
                             }
                         )
-                if data['type'] == 'message:edit':
-                    message_to_edit = await sync_to_async(ChatMessages.objects.get)(id=data['message_id'])
-                    if message_to_edit.sent_from == self.scope['user']:
+                if data['type'] == 'chat_message:edit':
+                    message_to_edit = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
+                    check = await (check_if_user(message_to_edit, self.scope['user']))
+                    if check == 1:
                         await sync_to_async(message_to_edit.update)(messages=data['message_edit'])
                         await self.channel_layer.group_send(
                             self.room_group_name,
                             {
-                                'type': 'chat_message:edit',
+                                'type': 'message_edit',
                                 'message_id': data['message_id'],
                                 'message_edit': data['message_edit']
                             }
@@ -181,6 +183,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             ids = await (private_chat_ids(room.id))
             if str(self.scope['user'].id) not in ids:
                 await self.close()
+
             if 'message' in data.keys():
                 message = data['message']
                 message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
@@ -199,18 +202,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
     # Receive message from room group
     async def chat_message(self, event):
-        if 'type' in event.keys():
-            if event['type'] == 'chat_message:delete':
-                await self.send(text_data=json.dumps({
-                    'type': 'chat_message:delete',
-                    'message_id': event['message_id']
-                }))
-            if event['type'] == 'chat_message:edit':
-                await self.send(text_data=json.dumps({
-                    'type': 'chat_message:edit',
-                    'message_id': event['message_id'],
-                    'message': event['message']
-                }))
         if 'users' in event.keys():
             users = event['users']
             await self.send(text_data=json.dumps({
@@ -236,3 +227,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'user_id': user_id,
                     'username': username
             }))
+
+    async def message_edit (self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'chat_message:edit',
+            'message_id': event['message_id'],
+            'message_edit': event['message_edit']
+        }))
+
+    async def message_delete (self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'chat_message:delete',
+            'message_id': event['message_id'],
+        }))

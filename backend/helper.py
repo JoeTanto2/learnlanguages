@@ -1,4 +1,4 @@
-from .models import ChatRoom, Chat, PrivateChatRoom, ChatMessages
+from .models import ChatRoom, Chat, PrivateChatRoom, ChatMessages,ProfilePicture
 from django.contrib.auth.models import User
 from asgiref.sync import sync_to_async
 from django.core.serializers import serialize

@@ -139,11 +139,13 @@ def profile_update (request):
     user = request.user
     if request.FILES != 0:
         avatar = request.FILES['avatar']
-        picture = ProfilePicture.objects.filter(user=user)
-        print(picture)
-        picture.update(picture=avatar)
-        return Response('everything worked')
+        update = update_pic(user, avatar)
+        if update == 0:
+            pass
+        else:
+            return Response ({"errorMessage": "something went wrong"})
     data = request.data
+    print(data)
     profile_id = User_info.objects.filter(user_id=user).first()
     data1 = {}
     data1['user_id'] = data['user_id']
@@ -261,7 +263,12 @@ def leave_chat_room (request):
         chat.participants.remove(user)
         return Response ({"message": "Success"})
 
-
-
-
-
+@api_view (["PUT"])
+def update_pic (request):
+    user = request.user
+    if request.FILES != 0:
+        avatar = request.FILES['avatar']
+        pic_to_update = ProfilePicture.objects.filter(user=user)
+        pic_to_update.update(picture=avatar)
+        return Response ({"message": "everything went well"})
+    return Response ({"errorMessage": "something went wrong"})
