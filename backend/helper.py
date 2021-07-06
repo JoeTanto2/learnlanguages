@@ -67,3 +67,9 @@ def update_message (object, message):
 #         print(i)
 #
 # pull_messages(1, 2)
+
+def photo_url ():
+    pic = ProfilePicture.objects.all()
+    print(pic[0].picture.url)
+
+photo_url()

@@ -127,7 +127,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             if 'message' in data.keys():
                 message = data['message']
-                sent_from = await sync_to_async(User.objects.filter, thread_sensitive=True)(id=self.scope['user'].id)
+                sent_from = await sync_to_async(User.objects.get, thread_sensitive=True)(id=self.scope['user'].id)
                 message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
                 sent_from=sent_from, sent_to=data['sent_to'], messages=message)
                 timestamp = await date_to_string(message_object.timestamp)
@@ -228,7 +228,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'username': username
             }))
 
-    async def message_edit (self, event):
+    async def message_edit(self, event):
         await self.send(text_data=json.dumps({
             'type': 'chat_message:edit',
             'message_id': event['message_id'],
