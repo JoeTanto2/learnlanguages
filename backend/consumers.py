@@ -97,6 +97,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     check = await (check_if_user(message_to_delete, self.scope['user']))
                     if check == 1:
                         await sync_to_async(message_to_delete.delete)()
+                        await self.channel_layer.group_send(
+                            self.room_group_name,
+                            {
+                                'type': 'chat_message:delete',
+                                'message_id': data['message_id']
+                            }
+                        )
                     else:
                        await self.close()
                 if type == "message:edit":
@@ -105,13 +112,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     if check == 1:
                         response = await update_message(message_to_edit, data['message_edit'])
                         if response == 0:
-                            pass
+                            await self.channel_layer.group_send(
+                                self.room_group_name,
+                                {
+                                    'type': 'chat_message:edit',
+                                    'message_id': data['message_id'],
+                                    'message': data['message_edit']
+                                }
+                            )
                         else:
                             await self.close()
                     else:
                         await self.close()
 
-                    #send message of success
             if 'message' in data.keys():
                 message = data['message']
                 sent_from = await sync_to_async(User.objects.get, thread_sensitive=True)(id=self.scope['user'].id)
@@ -144,11 +157,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     message_to_delete = await sync_to_async(ChatMessages.objects.get)(id=data['message_id'])
                     if message_to_delete.sent_from == self.scope['user'].id:
                         await sync_to_async(message_to_delete.delete)()
+                        await self.channel_layer.group_send(
+                            self.room_group_name,
+                            {
+                                'type': 'chat_message:delete',
+                                'message_id': data['message_id']
+                            }
+                        )
                 if data['type'] == 'message:edit':
                     message_to_edit = await sync_to_async(ChatMessages.objects.get)(id=data['message_id'])
                     if message_to_edit.sent_from == self.scope['user']:
                         await sync_to_async(message_to_edit.update)(messages=data['message_edit'])
-                        #send message confirmation
+                        await self.channel_layer.group_send(
+                            self.room_group_name,
+                            {
+                                'type': 'chat_message:edit',
+                                'message_id': data['message_id'],
+                                'message': data['message_edit']
+                            }
+                        )
                     else:
                         print('doesnt work')
             ids = await (private_chat_ids(room.id))
@@ -172,6 +199,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
     # Receive message from room group
     async def chat_message(self, event):
+        if 'type' in event.keys():
+            if event['type'] == 'message:delete':
+                await self.send(text_data=json.dumps({
+                    'type': 'chat_message:delete',
+                    'message_id': event['message_id']
+                }))
+            if event['type'] == 'message:edit':
+                await self.send(text_data=json.dumps({
+                    'type': 'chat_message:edit',
+                    'message_id': event['message_id'],
+                    'message': event['message']
+                }))
         if 'users' in event.keys():
             users = event['users']
             await self.send(text_data=json.dumps({
