@@ -57,6 +57,7 @@ def check_if_user (message, user_id):
 @sync_to_async
 def update_message (object, message):
     object.update(messages=message)
+    object[0].edited.set(True)
     return 0
 # def pull_messages(chat_id, page):
 #     messages = ChatMessages.objects.filter(room=chat_id).order_by('-timestamp')

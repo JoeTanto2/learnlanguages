@@ -124,7 +124,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                 {
                                     'type': 'message_edit',
                                     'message_id': data['message_id'],
-                                    'message_edit': data['message_edit']
+                                    'message_edit': data['message_edit'],
+                                    'edited': message_to_edit[0].edited
                                 }
                             )
                         else:
@@ -147,7 +148,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'timestamp': timestamp,
                         'user_id': self.scope['user'].id,
                         'username': self.scope['user'].username,
-                        "avatar": avatar_url
+                        "avatar": avatar_url,
+                        'edited': message_object.edited
                     }
                 )
             else:
@@ -184,7 +186,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             {
                                 'type': 'message_edit',
                                 'message_id': data['message_id'],
-                                'message_edit': data['message_edit']
+                                'message_edit': data['message_edit'],
+                                'edited': message_to_edit[0].edited
                             }
                         )
                     else:
@@ -207,7 +210,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'timestamp': timestamp,
                         'user_id': self.scope['user'].id,
                         'username': self.scope['user'].username,
-                        "avatar": avatar_url
+                        "avatar": avatar_url,
+                        'edited': message_object[0].edited
                     }
                 )
     # Receive message from room group
@@ -223,7 +227,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             username = event['username']
             if 'message' in event.keys():
                 message = event['message']
-
                 await self.send(text_data=json.dumps({
                     'type': 'chat_message',
                     'message': event['message'],
@@ -231,7 +234,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'message_id': event['message_id'],
                     'username': username,
                     'timestamp': event['timestamp'],
-                    'avatar': event['avatar']
+                    'avatar': event['avatar'],
+                    'edited': event['edited']
                 }))
             else:
                 await self.send(text_data=json.dumps({

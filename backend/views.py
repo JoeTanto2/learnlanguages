@@ -74,15 +74,25 @@ def index (request):
 @permission_classes([IsAuthenticated])
 def user_profile (request, pk):
     user = User.objects.filter(id=pk)
+    avatar = None
+    avatar_url = None
     for id in user:
         profile = User_info.objects.filter(user_id=id.id)
+    try:
+        avatar = ProfilePicture.objects.get(user=user[0])
+    except ProfilePicture.DoesNotExist:
+        pass
+    if avatar:
+        avatar_url = avatar.picture.url
     serializer = Auth_user(user, many=True)
     if profile:
         serializer1 = Profile(profile, many=True)
         return Response ({'user': serializer.data,
-                      'profile': serializer1.data})
+                      'profile': serializer1.data,
+                          'avatar': avatar_url})
     return Response ({'user': serializer.data,
-                      'profile': "the profile fields are empty"
+                      'profile': "the profile fields are empty",
+                      'avatar': avatar_url
                       })
 
 class Login (ObtainAuthToken):
@@ -169,11 +179,6 @@ def chat(request):
     public = ChatRoom.objects.filter(users=user)
     private = PrivateChatRoom.objects.filter(user=user)
     private1 = PrivateChatRoom.objects.filter(user1=user)
-    avatar = None
-    try:
-        avatar = ProfilePicture.objects.get(user=user)
-    except ProfilePicture.DoesNotExist:
-        pass
     list_to_send = []
     if public:
         for i in public:
@@ -184,24 +189,40 @@ def chat(request):
             list_to_send.append(dict)
     if private:
         for i in private:
+            avatar = None
+            avatar_url = None
             check = i.room.participants.filter(chat__participants=user)
             if check:
+                try:
+                    avatar = ProfilePicture.objects.get(user=i.user1)
+                except ProfilePicture.DoesNotExist:
+                    avatar = None
+                if avatar:
+                    avatar_url = avatar.picture.url
                 dict = {}
                 dict["chat_id"] = i.room.id
                 dict["chat_name"] = i.user1.username
                 dict["chat_type"] = "private"
+                dict['avatar'] = avatar_url
                 list_to_send.append(dict)
     if private1:
         for i in private1:
+            avatar = None
+            avatar_url = None
             check = i.room.participants.filter(chat__participants=user)
             if check:
+                try:
+                    avatar = ProfilePicture.objects.get(user=i.user)
+                except ProfilePicture.DoesNotExist:
+                    avatar = None
+                if avatar:
+                    avatar_url = avatar.picture.url
                 dict = {}
                 dict["chat_id"] = i.room.id
                 dict["chat_name"] = i.user.username
                 dict["chat_type"] = "private"
+                dict['avatar'] = avatar_url
                 list_to_send.append(dict)
-    if avatar:
-        return Response({"chats": list_to_send, "avatar": avatar.picture.url})
     return Response ({"chats": list_to_send})
 
 @csrf_exempt
