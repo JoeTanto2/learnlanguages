@@ -117,7 +117,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                 {
                                     'type': 'chat_message:edit',
                                     'message_id': data['message_id'],
-                                    'message': data['message_edit']
+                                    'message_edit': data['message_edit']
                                 }
                             )
                         else:
@@ -173,7 +173,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             {
                                 'type': 'chat_message:edit',
                                 'message_id': data['message_id'],
-                                'message': data['message_edit']
+                                'message_edit': data['message_edit']
                             }
                         )
                     else:
