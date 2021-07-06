@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
+from django.core.exceptions import ObjectDoesNotExist
 import os
 import json
 from django.core.serializers.json import DjangoJSONEncoder
@@ -112,9 +113,11 @@ def auto_delete_file_on_delete(sender, instance, **kwargs):
 @receiver(models.signals.pre_save, sender=ProfilePicture)
 def delete_old_file (sender, instance, **kwargs):
     try:
-        old_instance = ProfilePicture.objects.get(id=instance.id)
-    except old_instance.DoesNotExist:
+        old_instance = ProfilePicture.objects.get(user=instance.user)
+        print(f'{old_instance} it is old')
+    except ObjectDoesNotExist:
         return None
     old_instance.picture.delete(save=False)
+    old_instance.delete()
 
 

@@ -55,12 +55,15 @@ def registration (request):
             serializer1.save()
         else:
             print(serializer1.errors)
-        if request.FILES != 0:
-            serializer2 = Picture(data=user_id, files=request.FILES)
-            if serializer2.is_valid():
-                serializer2.save()
-            else:
-                raise ValidationError(serializer2.errors)
+        serializer2 = Picture(data=user_id, files=request.FILES)
+        if serializer2.is_valid():
+            serializer2.save()
+        else:
+            raise ValidationError(serializer2.errors)
+        if request.FILES['avatar'] != 0:
+            avatar = request.FILES['avatar']
+            user = User.objects.get(username=account.username)
+            to_update = ProfilePicture.objects.create(user=user, picture=avatar)
         return Response(data)
 
 
@@ -137,15 +140,12 @@ class Password_update(UpdateAPIView):
 @permission_classes([IsAuthenticated])
 def profile_update (request):
     user = request.user
-    if request.FILES != 0:
+    print(request.data)
+    if request.FILES['avatar'] != 0:
         avatar = request.FILES['avatar']
-        update = update_pic(user, avatar)
-        if update == 0:
-            pass
-        else:
-            return Response ({"errorMessage": "something went wrong"})
+        #to_delete = ProfilePicture.objects.filter(user=user).delete()
+        to_update = ProfilePicture.objects.create(user=user, picture=avatar)
     data = request.data
-    print(data)
     profile_id = User_info.objects.filter(user_id=user).first()
     data1 = {}
     data1['user_id'] = data['user_id']
@@ -263,12 +263,12 @@ def leave_chat_room (request):
         chat.participants.remove(user)
         return Response ({"message": "Success"})
 
-@api_view (["PUT"])
-def update_pic (request):
-    user = request.user
-    if request.FILES != 0:
-        avatar = request.FILES['avatar']
-        pic_to_update = ProfilePicture.objects.filter(user=user)
-        pic_to_update.update(picture=avatar)
-        return Response ({"message": "everything went well"})
-    return Response ({"errorMessage": "something went wrong"})
+# @api_view (["PUT"])
+# def update_pic (request):
+#     user = request.user
+#     if request.FILES != 0:
+#         avatar = request.FILES['avatar']
+#         pic_to_update = ProfilePicture.objects.filter(user=user)
+#         pic_to_update.update(picture=avatar)
+#         return Response ({"message": "everything went well"})
+#     return Response ({"errorMessage": "something went wrong"})

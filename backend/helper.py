@@ -68,8 +68,13 @@ def update_message (object, message):
 #
 # pull_messages(1, 2)
 
-def photo_url ():
-    pic = ProfilePicture.objects.all()
-    print(pic[0].picture.url)
-
-photo_url()
+# def photo_url ():
+#     pic = ProfilePicture.objects.all()
+#     print(pic[0].picture.url)
+#
+# photo_url()
+# @csrf_exempt
+# def update_pic(user, avatar):
+#     pic_to_delete = ProfilePicture.objects.filter(user=user).delete()
+#     pic_to_create = ProfilePicture.objects.create(user=user, picture=avatar)
+#     return 0

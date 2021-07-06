@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (user_profile, registration, index, search, Login,
-Password_update, profile_update, chat, room_create, private_room_create, get_chat_messages, leave_chat_room, update_pic)
+Password_update, profile_update, chat, room_create, private_room_create, get_chat_messages, leave_chat_room)
 
 urlpatterns = [
     path('', index, name='index'),
@@ -14,6 +14,5 @@ urlpatterns = [
     path('private_chat/', private_room_create),
     path('messages/', get_chat_messages),
     path('leave_chat/', leave_chat_room),
-    path('picture_update/', update_pic),
     path('chat/', chat),
 ]
