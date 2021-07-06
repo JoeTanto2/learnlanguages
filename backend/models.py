@@ -88,7 +88,7 @@ class ChatMessages (models.Model):
 
 class ProfilePicture (models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    picture = models.ImageField()
+    picture = models.ImageField(upload_to='avatar/')
 
     def __str__(self):
         return f'{self.user.username}'

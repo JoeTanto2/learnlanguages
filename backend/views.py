@@ -138,7 +138,6 @@ class Password_update(UpdateAPIView):
 def profile_update (request):
     user = request.user
     if request.FILES != 0:
-        print('hi')
         avatar = request.FILES['avatar']
         picture = ProfilePicture.objects.filter(user=user)
         print(picture)
