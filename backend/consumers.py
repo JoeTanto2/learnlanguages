@@ -200,12 +200,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
     # Receive message from room group
     async def chat_message(self, event):
         if 'type' in event.keys():
-            if event['type'] == 'message:delete':
+            if event['type'] == 'chat_message:delete':
                 await self.send(text_data=json.dumps({
                     'type': 'chat_message:delete',
                     'message_id': event['message_id']
                 }))
-            if event['type'] == 'message:edit':
+            if event['type'] == 'chat_message:edit':
                 await self.send(text_data=json.dumps({
                     'type': 'chat_message:edit',
                     'message_id': event['message_id'],
