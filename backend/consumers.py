@@ -4,7 +4,7 @@ from asgiref.sync import async_to_sync, sync_to_async
 from channels.generic.websocket import WebsocketConsumer
 from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework.response import Response
-from .models import ChatMessages, Chat, ChatRoom, PrivateChatRoom
+from .models import ChatMessages, Chat, ChatRoom, PrivateChatRoom, ProfilePicture
 from django.core.serializers import serialize
 from .helper import chat_room_query, private_chat_ids, check_if_in_chat, date_to_string, check_if_user, update_message
 
@@ -54,6 +54,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 pass
         if not self.scope['user'].id:
             await self.close()
+        avatar = None
+        avatar_url = None
+        try:
+            avatar = await sync_to_async(ProfilePicture.objects.get, thread_sensitive=True)(user=self.scope['user'])
+        except ProfilePicture.DoesNotExist:
+            pass
+        if avatar:
+            avatar_url = avatar.picture.url
         room = await sync_to_async(Chat.objects.get, thread_sensitive=True)(id=int(self.room_name))
         if room.is_private == False:
             try:
@@ -138,7 +146,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'message_id': message_object.id,
                         'timestamp': timestamp,
                         'user_id': self.scope['user'].id,
-                        'username': self.scope['user'].username
+                        'username': self.scope['user'].username,
+                        "avatar": avatar_url
                     }
                 )
             else:
@@ -147,7 +156,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     {
                         'type': 'chat_message',
                         'user_id': self.scope['user'].id,
-                        'username': self.scope['user'].username
+                        'username': self.scope['user'].username,
+                        "avatar": avatar_url
                     }
                 )
         else:
@@ -196,7 +206,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'message_id': message_object.id,
                         'timestamp': timestamp,
                         'user_id': self.scope['user'].id,
-                        'username': self.scope['user'].username
+                        'username': self.scope['user'].username,
+                        "avatar": avatar_url
                     }
                 )
     # Receive message from room group
@@ -219,12 +230,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'user_id': user_id,
                     'message_id': event['message_id'],
                     'username': username,
-                    'timestamp': event['timestamp']
+                    'timestamp': event['timestamp'],
+                    'avatar': event['avatar']
                 }))
             else:
                 await self.send(text_data=json.dumps({
                     'user_id': user_id,
-                    'username': username
+                    'username': username,
+                    'avatar': event['avatar']
             }))
 
     async def message_edit(self, event):

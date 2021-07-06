@@ -169,6 +169,11 @@ def chat(request):
     public = ChatRoom.objects.filter(users=user)
     private = PrivateChatRoom.objects.filter(user=user)
     private1 = PrivateChatRoom.objects.filter(user1=user)
+    avatar = None
+    try:
+        avatar = ProfilePicture.objects.get(user=user)
+    except ProfilePicture.DoesNotExist:
+        pass
     list_to_send = []
     if public:
         for i in public:
@@ -195,6 +200,8 @@ def chat(request):
                 dict["chat_name"] = i.user.username
                 dict["chat_type"] = "private"
                 list_to_send.append(dict)
+    if avatar:
+        return Response({"chats": list_to_send, "avatar": avatar.picture.url})
     return Response ({"chats": list_to_send})
 
 @csrf_exempt
