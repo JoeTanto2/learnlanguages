@@ -55,12 +55,15 @@ def registration (request):
             serializer1.save()
         else:
             print(serializer1.errors)
-        if request.FILES['avatar'] != 0:
+        if 'avatar' in request.FILES.keys():
             avatar = request.FILES['avatar']
-            user = User.objects.get(username=account.username)
-            to_update = ProfilePicture.objects.create(user=user, picture=avatar)
+            if avatar:
+                user = User.objects.get(username=account.username)
+                to_update = ProfilePicture.objects.create(user=user, picture=avatar)
         return Response(data)
-
+''''
+FIX upload AVATAR ON SIGN UP!!!!!
+'''
 
 
 @api_view(['GET'])
@@ -145,11 +148,11 @@ class Password_update(UpdateAPIView):
 @permission_classes([IsAuthenticated])
 def profile_update (request):
     user = request.user
-    print(request.data)
-    if request.FILES['avatar'] != 0:
+    if 'avatar' in request.FILES.keys():
         avatar = request.FILES['avatar']
-        #to_delete = ProfilePicture.objects.filter(user=user).delete()
-        to_update = ProfilePicture.objects.create(user=user, picture=avatar)
+        if avatar:
+            #to_delete = ProfilePicture.objects.filter(user=user).delete()
+            to_update = ProfilePicture.objects.create(user=user, picture=avatar)
     data = request.data
     profile_id = User_info.objects.filter(user_id=user).first()
     data1 = {}
@@ -247,6 +250,7 @@ def private_room_create(request):
     chat = PrivateChatRoom.objects.filter(user=data['user_id']).filter(user1=data['user1_id'])
     if not chat:
         chat_create = Chat.objects.create(is_private=True)
+        print(chat_create)
         user = User.objects.get(id=data['user_id'])
         user1 = User.objects.get(id=data['user1_id'])
         create_private_room = PrivateChatRoom.objects.create(room=chat_create, user=user, user1=user1)
@@ -254,7 +258,7 @@ def private_room_create(request):
         return Response({"chat_id": chat_create.id})
     else:
         chat_participants = Chat.objects.filter(id=chat[0].room.id)
-        chat_participants.participants.add(user)
+        chat_participants[0].participants.add(user)
         chat_id = chat[0].room.id
         return Response ({"chat_id": chat_id})
 
