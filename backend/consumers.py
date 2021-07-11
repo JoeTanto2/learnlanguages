@@ -269,7 +269,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'chat_message:edit',
             'message_id': event['message_id'],
-            'message_edit': event['message_edit']
+            'message_edit': event['message_edit'],
+            'edited': event['edited']
         }))
 
     async def message_delete (self, event):
