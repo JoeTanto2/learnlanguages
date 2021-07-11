@@ -77,6 +77,7 @@ class ChatMessages (models.Model):
     messages = models.CharField(max_length=500, unique=False, blank=False)
     timestamp = models.DateTimeField(auto_now_add=True)
     edited = models.BooleanField(default=False)
+
     texts = ChatMessagesManager()
     objects = models.Manager()
 

@@ -61,9 +61,6 @@ def registration (request):
                 user = User.objects.get(username=account.username)
                 to_update = ProfilePicture.objects.create(user=user, picture=avatar)
         return Response(data)
-''''
-FIX upload AVATAR ON SIGN UP!!!!!
-'''
 
 
 @api_view(['GET'])
@@ -269,14 +266,14 @@ def get_chat_messages(request):
     id = info['id']
     list_to_send = []
     messages = ChatMessagesManager.messages(ChatMessagesManager(), id)
-    paginator = Paginator(messages, 3)
+    paginator = Paginator(messages, 20)
     try:
         page = paginator.page(info['page'])
     except EmptyPage:
         raise ValidationError ({"errorMessage": "There is no more messages to display."})
     for i in page:
         list_to_send.append({'message_id': i.id, 'room': i.room.id, 'username': i.sent_from.username,
-                             'sent_from': i.sent_from.id, 'sent_to': i.sent_to, 'message': i.messages, 'timestamp': i.timestamp})
+        'sent_from': i.sent_from.id, 'sent_to': i.sent_to, 'message': i.messages, 'timestamp': i.timestamp, 'edited': i.edited})
     return Response({'messages': list_to_send})
 
 @api_view(["GET"])

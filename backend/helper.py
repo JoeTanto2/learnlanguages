@@ -56,9 +56,16 @@ def check_if_user (message, user_id):
 
 @sync_to_async
 def update_message (object, message):
-    object.update(messages=message)
-    object[0].edited.set(True)
+    object.update(messages=message, edited=True)
     return 0
+@sync_to_async
+def video_users (room):
+    user_list = []
+    users = Chat.objects.get(id=room)
+    users_are = users.participants.all().values('id')
+    for i in users_are:
+        user_list.append(i)
+    return user_list
 # def pull_messages(chat_id, page):
 #     messages = ChatMessages.objects.filter(room=chat_id).order_by('-timestamp')
 #     paginator = Paginator(messages, 2)

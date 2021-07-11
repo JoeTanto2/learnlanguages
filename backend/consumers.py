@@ -6,7 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from rest_framework.response import Response
 from .models import ChatMessages, Chat, ChatRoom, PrivateChatRoom, ProfilePicture
 from django.core.serializers import serialize
-from .helper import chat_room_query, private_chat_ids, check_if_in_chat, date_to_string, check_if_user, update_message
+from .helper import chat_room_query, private_chat_ids, check_if_in_chat, date_to_string, check_if_user, update_message, video_users
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -21,7 +21,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
-        # Leave room group
         chat = await sync_to_async(Chat.objects.get, thread_sensitive=True)(id=int(self.room_name))
         if chat.is_private == False:
             await sync_to_async(chat.participants.remove, thread_sensitive=True)(self.scope['user'])
@@ -39,7 +38,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
     )
 
-    # Receive message from WebSocket
     async def receive(self, text_data):
         data = json.loads(text_data)
         if self.scope['user'].id != None:
@@ -85,20 +83,48 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
             else:
-                check = await check_if_in_chat (room.id, self.scope['user'])
-                if check == 0:
-                    await sync_to_async(check_for_room.users.add, thread_sensitive=True)(self.scope['user'])
-                await sync_to_async(room.participants.add)(self.scope['user'])
-                users = await chat_room_query(room.id)
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        "type": "chat_message",
-                        "users": users
-                    }
-                )
+                if 'type' not in data.keys():
+                    check = await check_if_in_chat (room.id, self.scope['user'])
+                    if check == 0:
+                        await sync_to_async(check_for_room.users.add, thread_sensitive=True)(self.scope['user'])
+                    await sync_to_async(room.participants.add)(self.scope['user'])
+                    users = await chat_room_query(room.id)
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            "type": "chat_message",
+                            "users": users
+                        }
+                    )
             if 'type' in data.keys():
                 type = data['type']
+                if type == 'video:join':
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'peerID_collection',
+                            'user_id': data['user_id']
+                        }
+                    )
+                # if type == "peerID_collection":
+                #     if data['user_id'] != self.scope['user'].id:
+                #         await self.channel_layer.group_send(
+                #             self.room_group_name,
+                #             {
+                #                 "type": "video_relay_ice",
+                #                 "peerID": self.scope['user'].id,
+                #                 'createOffer': True
+                #             }
+                #         )
+                #     else:
+                #         await self.channel_layer.group_send(
+                #             self.room_group_name,
+                #             {
+                #                 "type": "video_relay_ice",
+                #                 "peerID": self.scope['user'].id,
+                #                 'createOffer': False
+                #             }
+                #         )
                 if type == 'chat_message:delete':
                     message_to_delete = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
                     check = await (check_if_user(message_to_delete, self.scope['user']))
@@ -114,44 +140,45 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     else:
                        await self.close()
                 if type == "chat_message:edit":
-                    message_to_edit = await sync_to_async(ChatMessages.objects.filter, thread_sensitive=True)(id=data['message_id'])
-                    check = await (check_if_user(message_to_edit, self.scope['user']))
-                    if check == 1:
-                        response = await update_message(message_to_edit, data['message_edit'])
-                        if response == 0:
-                            await self.channel_layer.group_send(
-                                self.room_group_name,
-                                {
-                                    'type': 'message_edit',
-                                    'message_id': data['message_id'],
-                                    'message_edit': data['message_edit'],
-                                    'edited': message_to_edit[0].edited
-                                }
-                            )
+                    if len(data['message_edit'].lstrip()) != 0:
+                        message_to_edit = await sync_to_async(ChatMessages.objects.filter, thread_sensitive=True)(id=data['message_id'])
+                        check = await (check_if_user(message_to_edit, self.scope['user']))
+                        if check == 1:
+                            response = await update_message(message_to_edit, data['message_edit'])
+                            if response == 0:
+                                await self.channel_layer.group_send(
+                                    self.room_group_name,
+                                    {
+                                        'type': 'message_edit',
+                                        'message_id': data['message_id'],
+                                        'message_edit': data['message_edit'],
+                                        'edited': True
+                                    }
+                                )
+                            else:
+                                await self.close()
                         else:
                             await self.close()
-                    else:
-                        await self.close()
-
             if 'message' in data.keys():
                 message = data['message']
-                sent_from = await sync_to_async(User.objects.get, thread_sensitive=True)(id=self.scope['user'].id)
-                message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
-                sent_from=sent_from, sent_to=data['sent_to'], messages=message)
-                timestamp = await date_to_string(message_object.timestamp)
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'chat_message',
-                        'message': message,
-                        'message_id': message_object.id,
-                        'timestamp': timestamp,
-                        'user_id': self.scope['user'].id,
-                        'username': self.scope['user'].username,
-                        "avatar": avatar_url,
-                        'edited': message_object.edited
-                    }
-                )
+                if len(message.lstrip()) != 0:
+                    sent_from = await sync_to_async(User.objects.get, thread_sensitive=True)(id=self.scope['user'].id)
+                    message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
+                    sent_from=sent_from, sent_to=data['sent_to'], messages=message)
+                    timestamp = await date_to_string(message_object.timestamp)
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'chat_message',
+                            'message': message,
+                            'message_id': message_object.id,
+                            'timestamp': timestamp,
+                            'user_id': self.scope['user'].id,
+                            'username': self.scope['user'].username,
+                            "avatar": avatar_url,
+                            'edited': message_object.edited
+                        }
+                    )
             else:
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -163,7 +190,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
         else:
+            ids = await (private_chat_ids(room.id))
+            if str(self.scope['user'].id) not in ids:
+                await self.close()
             if 'type' in data.keys():
+                type = data['type']
+                if type == 'video:join':
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'peerID_collection',
+                            'user_id': data['user_id']
+                        }
+                    )
+                # if type == "peerID_collection":
+                #     if data['user_id'] != self.scope['user'].id:
+                #         await self.channel_layer.group_send(
+                #             self.room_group_name,
+                #             {
+                #                 "type": "video_relay_ice",
+                #                 "peerID": self.scope['user'].id,
+                #                 'createOffer': True
+                #             }
+                #         )
+                #     else:
+                #         await self.channel_layer.group_send(
+                #             self.room_group_name,
+                #             {
+                #                 "type": "video_relay_ice",
+                #                 "peerID": self.scope['user'].id,
+                #                 'createOffer': False
+                #             }
+                #         )False
                 if data['type'] == 'chat_message:delete':
                     message_to_delete = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
                     check = await (check_if_user(message_to_delete, self.scope['user']))
@@ -177,44 +235,43 @@ class ChatConsumer(AsyncWebsocketConsumer):
                             }
                         )
                 if data['type'] == 'chat_message:edit':
-                    message_to_edit = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
-                    check = await (check_if_user(message_to_edit, self.scope['user']))
-                    if check == 1:
-                        await sync_to_async(message_to_edit.update)(messages=data['message_edit'])
-                        await self.channel_layer.group_send(
-                            self.room_group_name,
-                            {
-                                'type': 'message_edit',
-                                'message_id': data['message_id'],
-                                'message_edit': data['message_edit'],
-                                'edited': message_to_edit[0].edited
-                            }
-                        )
-                    else:
-                        print('doesnt work')
-            ids = await (private_chat_ids(room.id))
-            if str(self.scope['user'].id) not in ids:
-                await self.close()
-
+                    if len(data['message_edit'].lstrip()) != 0:
+                        message_to_edit = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
+                        check = await (check_if_user(message_to_edit, self.scope['user']))
+                        if check == 1:
+                            response = await update_message(message_to_edit, data['message_edit'])
+                            if response == 0:
+                                await self.channel_layer.group_send(
+                                    self.room_group_name,
+                                    {
+                                        'type': 'message_edit',
+                                        'message_id': data['message_id'],
+                                        'message_edit': data['message_edit'],
+                                        'edited': True
+                                    }
+                                )
+                            else:
+                                print('not working')
             if 'message' in data.keys():
                 message = data['message']
-                message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
-                sent_from=self.scope['user'], messages=message)
-                timestamp = await date_to_string(message_object.timestamp)
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'chat_message',
-                        'message': message,
-                        'message_id': message_object.id,
-                        'timestamp': timestamp,
-                        'user_id': self.scope['user'].id,
-                        'username': self.scope['user'].username,
-                        "avatar": avatar_url,
-                        'edited': message_object[0].edited
-                    }
-                )
-    # Receive message from room group
+                if len(message.lstrip()) != 0:
+                    message_object = await sync_to_async(ChatMessages.objects.create, thread_sensitive=True)(room=room,
+                    sent_from=self.scope['user'], messages=message)
+                    timestamp = await date_to_string(message_object.timestamp)
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'chat_message',
+                            'message': message,
+                            'message_id': message_object.id,
+                            'timestamp': timestamp,
+                            'user_id': self.scope['user'].id,
+                            'username': self.scope['user'].username,
+                            "avatar": avatar_url,
+                            'edited': message_object.edited
+                        }
+                    )
+    # Receive message from room group   https://www.youtube.com/watch?v=MBOlZMLaQ8g&t=5882s
     async def chat_message(self, event):
         if 'users' in event.keys():
             users = event['users']
@@ -256,3 +313,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'type': 'chat_message:delete',
             'message_id': event['message_id'],
         }))
+
+    async def peerID_collection(self, event):
+        users = await (video_users(int(self.room_name)))
+        print(users)
+        for key in users:
+            if key['id'] != event['user_id']:
+                await self.send (text_data=json.dumps({
+                    'type': 'video:ice-candidate',
+                    'peerID': key['id'],
+                    'createOffer': True
+                }))
+            else:
+                await self.send(text_data=json.dumps({
+                    'type': 'video:ice-candidate',
+                    'peerID': key['id'],
+                    'createOffer': False
+                }))
+
+
+
