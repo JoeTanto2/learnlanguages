@@ -98,33 +98,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     )
             if 'type' in data.keys():
                 type = data['type']
-                if type == 'video:join':
-                    await self.channel_layer.group_send(
-                        self.room_group_name,
-                        {
-                            'type': 'peerID_collection',
-                            'user_id': data['user_id']
-                        }
-                    )
-                # if type == "peerID_collection":
-                #     if data['user_id'] != self.scope['user'].id:
-                #         await self.channel_layer.group_send(
-                #             self.room_group_name,
-                #             {
-                #                 "type": "video_relay_ice",
-                #                 "peerID": self.scope['user'].id,
-                #                 'createOffer': True
-                #             }
-                #         )
-                #     else:
-                #         await self.channel_layer.group_send(
-                #             self.room_group_name,
-                #             {
-                #                 "type": "video_relay_ice",
-                #                 "peerID": self.scope['user'].id,
-                #                 'createOffer': False
-                #             }
-                #         )
+                # if type == 'video:join':
+                #     await self.channel_layer.group_send(
+                #         self.room_group_name,
+                #         {
+                #             'type': 'peerID_collection',
+                #             'user_id': data['user_id']
+                #         }
+                #     )
+
                 if type == 'chat_message:delete':
                     message_to_delete = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
                     check = await (check_if_user(message_to_delete, self.scope['user']))
@@ -195,34 +177,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.close()
             if 'type' in data.keys():
                 type = data['type']
-                if type == 'video:join':
-                    await self.channel_layer.group_send(
-                        self.room_group_name,
-                        {
-                            'type': 'peerID_collection',
-                            'user_id': data['user_id']
-                        }
-                    )
-                # if type == "peerID_collection":
-                #     if data['user_id'] != self.scope['user'].id:
-                #         await self.channel_layer.group_send(
-                #             self.room_group_name,
-                #             {
-                #                 "type": "video_relay_ice",
-                #                 "peerID": self.scope['user'].id,
-                #                 'createOffer': True
-                #             }
-                #         )
-                #     else:
-                #         await self.channel_layer.group_send(
-                #             self.room_group_name,
-                #             {
-                #                 "type": "video_relay_ice",
-                #                 "peerID": self.scope['user'].id,
-                #                 'createOffer': False
-                #             }
-                #         )False
-                if data['type'] == 'chat_message:delete':
+                # if type == 'video:join':
+                #     await self.channel_layer.group_send(
+                #         self.room_group_name,
+                #         {
+                #             'type': 'peerID_collection',
+                #             'user_id': data['user_id']
+                #         }
+                #     )
+
+                if type == 'chat_message:delete':
                     message_to_delete = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
                     check = await (check_if_user(message_to_delete, self.scope['user']))
                     if check == 1:
@@ -234,7 +198,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                                 'message_id': data['message_id']
                             }
                         )
-                if data['type'] == 'chat_message:edit':
+                if type == 'chat_message:edit':
                     if len(data['message_edit'].lstrip()) != 0:
                         message_to_edit = await sync_to_async(ChatMessages.objects.filter)(id=data['message_id'])
                         check = await (check_if_user(message_to_edit, self.scope['user']))
@@ -314,22 +278,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message_id': event['message_id'],
         }))
 
-    async def peerID_collection(self, event):
-        users = await (video_users(int(self.room_name)))
-        print(users)
-        for key in users:
-            if key['id'] != event['user_id']:
-                await self.send (text_data=json.dumps({
-                    'type': 'video:ice-candidate',
-                    'peerID': key['id'],
-                    'createOffer': True
-                }))
-            else:
-                await self.send(text_data=json.dumps({
-                    'type': 'video:ice-candidate',
-                    'peerID': key['id'],
-                    'createOffer': False
-                }))
+    # async def peerID_collection(self, event):
+    #     users = await (video_users(int(self.room_name)))
+    #     print(users)
+    #     for key in users:
+    #         if key['id'] != event['user_id']:
+    #             await self.send (text_data=json.dumps({
+    #                 'type': 'video:ice-candidate',
+    #                 'peerID': key['id'],
+    #                 'createOffer': True
+    #             }))
+    #         else:
+    #             await self.send(text_data=json.dumps({
+    #                 'type': 'video:ice-candidate',
+    #                 'peerID': key['id'],
+    #                 'createOffer': False
+    #             }))
 
 
 
