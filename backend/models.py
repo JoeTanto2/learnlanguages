@@ -66,8 +66,6 @@ class ChatMessagesManager (models.Manager):
     def messages(self, room):
         text = ChatMessages.objects.filter(room=room).order_by("-timestamp")
         return text
-    def call (self):
-        o = ChatMessages.natural_key(self)
 
 
 class ChatMessages (models.Model):
@@ -121,4 +119,11 @@ def delete_old_file (sender, instance, **kwargs):
     old_instance.picture.delete(save=False)
     old_instance.delete()
 
+class IsOnline (models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    isonline = models.BooleanField(default=False)
+    last_time_seen = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.user.username
 

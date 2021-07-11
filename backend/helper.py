@@ -1,4 +1,4 @@
-from .models import ChatRoom, Chat, PrivateChatRoom, ChatMessages,ProfilePicture
+from .models import ChatRoom, Chat, PrivateChatRoom, ChatMessages,ProfilePicture, IsOnline
 from django.contrib.auth.models import User
 from asgiref.sync import sync_to_async
 from django.core.serializers import serialize
@@ -66,6 +66,33 @@ def video_users (room):
     for i in users_are:
         user_list.append(i)
     return user_list
+
+@sync_to_async
+def online (user_id):
+    user = User.objects.filter(id=user_id)
+    if not user:
+        raise ValueError({'errorMessage': "User doesn't exist"})
+    is_online = IsOnline.objects.filter(user=user[0])
+    if is_online:
+        is_online.update(isonline=True)
+    else:
+        IsOnline.objects.create(user=user[0], isonline=True)
+    return 0
+
+
+@sync_to_async
+def offline (user_id):
+    try:
+        object_usr = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        raise ValueError({"errorMessage": "User doesn't exist"})
+    user = IsOnline.objects.filter(user=object_usr)
+    if user:
+        user.update(isonline=False)
+    else:
+        raise ValueError({"errorMessage": "User doesn't exist"})
+
+
 # def pull_messages(chat_id, page):
 #     messages = ChatMessages.objects.filter(room=chat_id).order_by('-timestamp')
 #     paginator = Paginator(messages, 2)

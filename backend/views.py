@@ -272,8 +272,9 @@ def get_chat_messages(request):
     except EmptyPage:
         raise ValidationError ({"errorMessage": "There is no more messages to display."})
     for i in page:
+        avatar = ProfilePicture.objects.get(user=i.sent_from)
         list_to_send.append({'message_id': i.id, 'room': i.room.id, 'username': i.sent_from.username,
-        'sent_from': i.sent_from.id, 'sent_to': i.sent_to, 'message': i.messages, 'timestamp': i.timestamp, 'edited': i.edited})
+        'sent_from': i.sent_from.id, 'sent_to': i.sent_to, 'message': i.messages, 'timestamp': i.timestamp, 'edited': i.edited, 'avatar': avatar.picture.url})
     return Response({'messages': list_to_send})
 
 @api_view(["GET"])
