@@ -8,7 +8,7 @@ from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
-from .models import User_info, Chat, PrivateChatRoom, ChatRoom, ChatMessages, ChatMessagesManager, ProfilePicture
+from .models import User_info, Chat, PrivateChatRoom, ChatRoom, ChatMessages, ChatMessagesManager, ProfilePicture, IsOnline
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
 from rest_framework.exceptions import ValidationError, ParseError
@@ -193,10 +193,7 @@ def chat(request):
             avatar_url = None
             check = i.room.participants.filter(chat__participants=user)
             if check:
-                try:
-                    avatar = ProfilePicture.objects.get(user=i.user1)
-                except ProfilePicture.DoesNotExist:
-                    avatar = None
+                avatar = ProfilePicture.objects.filter(user=i.user1).first()
                 if avatar:
                     avatar_url = avatar.picture.url
                 dict = {}
@@ -207,23 +204,21 @@ def chat(request):
                 list_to_send.append(dict)
     if private1:
         for i in private1:
-            avatar = None
-            avatar_url = None
-            check = i.room.participants.filter(chat__participants=user)
-            if check:
-                try:
-                    avatar = ProfilePicture.objects.get(user=i.user)
-                except ProfilePicture.DoesNotExist:
-                    avatar = None
-                if avatar:
-                    avatar_url = avatar.picture.url
-                dict = {}
-                dict["chat_id"] = i.room.id
-                dict["chat_name"] = i.user.username
-                dict["chat_type"] = "private"
-                dict['avatar'] = avatar_url
-                list_to_send.append(dict)
-    return Response ({"chats": list_to_send})
+            if i.user.id != i.user1.id:
+                avatar = None
+                avatar_url = None
+                check = i.room.participants.filter(chat__participants=user)
+                if check:
+                    avatar = ProfilePicture.objects.filter(user=i.user).first()
+                    if avatar:
+                        avatar_url = avatar.picture.url
+                    dict = {}
+                    dict["chat_id"] = i.room.id
+                    dict["chat_name"] = i.user.username
+                    dict["chat_type"] = "private"
+                    dict['avatar'] = avatar_url
+                    list_to_send.append(dict)
+    return Response({"chats": list_to_send})
 
 @csrf_exempt
 @api_view(["POST"])
@@ -233,7 +228,7 @@ def room_create(request):
     user = request.user
     chat_name = Chat.objects.filter(chat_name__iexact=info['chat_name'])
     if chat_name:
-        return Response({"errorMessage": 'Chat with this name already exists'})
+        raise ValidationError({"errorMessage": f"Chat with name {info['chat_name']} already exists"})
     chat = Chat.objects.create(chat_name=info['chat_name'], language=info['language'])
     chat_room = ChatRoom.objects.create(chat_id=chat)
     chat_room.users.add(user)
@@ -272,9 +267,16 @@ def get_chat_messages(request):
     except EmptyPage:
         raise ValidationError ({"errorMessage": "There is no more messages to display."})
     for i in page:
-        avatar = ProfilePicture.objects.get(user=i.sent_from)
+        try:
+            avatar = ProfilePicture.objects.get(user=i.sent_from)
+        except ProfilePicture.DoesNotExist:
+            avatar = None
+        if avatar:
+            avatar_url = avatar.picture.url
+        else:
+            avatar_url = None
         list_to_send.append({'message_id': i.id, 'room': i.room.id, 'username': i.sent_from.username,
-        'sent_from': i.sent_from.id, 'sent_to': i.sent_to, 'message': i.messages, 'timestamp': i.timestamp, 'edited': i.edited, 'avatar': avatar.picture.url})
+        'sent_from': i.sent_from.id, 'sent_to': i.sent_to, 'message': i.messages, 'timestamp': i.timestamp, 'edited': i.edited, 'avatar': avatar_url})
     return Response({'messages': list_to_send})
 
 @api_view(["GET"])
@@ -290,6 +292,13 @@ def leave_chat_room (request):
     else:
         chat.participants.remove(user)
         return Response ({"message": "Success"})
+
+@api_view (["GET"])
+def onlinecheck (request):
+    info = request.query_params
+    check = IsOnline.objects.filter(user_id=info['user_id']).first()
+    return Response ({'user_id': check.user.id, 'online': check.isonline, 'seen_last_time': check.last_time_seen})
+
 
 # @api_view (["PUT"])
 # def update_pic (request):

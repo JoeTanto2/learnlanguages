@@ -11,7 +11,6 @@ from .helper import chat_room_query, private_chat_ids, check_if_in_chat, date_to
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['chat_id']
-        print(self.scope['url_route'])
         self.room_group_name = 'chat_%s' % self.room_name
         # Join room group
         await self.channel_layer.group_add(
