@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User_info, Chat, ChatRoom, ChatMessages, PrivateChatRoom, ProfilePicture, IsOnline
+from .models import User_info, Chat, ChatRoom, ChatMessages, PrivateChatRoom, ProfilePicture, IsOnline, ChatInfo
 from rest_framework.authtoken.admin import TokenAdmin
 from django.core.paginator import Paginator
 from django.core.cache import cache
@@ -51,3 +51,4 @@ admin.site.register(ChatRoom)
 admin.site.register(PrivateChatRoom)
 admin.site.register(ProfilePicture)
 admin.site.register(IsOnline)
+admin.site.register(ChatInfo)

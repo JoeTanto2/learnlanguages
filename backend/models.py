@@ -127,3 +127,30 @@ class IsOnline (models.Model):
     def __str__(self):
         return self.user.username
 
+class ChatInfo (models.Model):
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
+    creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    avatar = models.ImageField(upload_to='chat_avatar/', null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.chat.chat_name
+
+@receiver(models.signals.post_delete, sender=ChatInfo)
+def auto_delete_file_on_delete_chat(sender, instance, **kwargs):
+    if instance.avatar:
+        instance.avatar.delete(save=False)  ## use for aws s3
+        # if os.path.isfile(instance.image.path): ## use this in development
+        #     os.remove(instance.image.path)
+
+@receiver(models.signals.pre_save, sender=ChatInfo)
+def delete_old_file_chat(sender, instance, **kwargs):
+    try:
+        old_instance = ChatInfo.objects.get(chat=instance.chat)
+        print(f'{old_instance} it is old')
+    except ObjectDoesNotExist:
+        return None
+    old_instance.avatar.delete(save=False)
+    old_instance.delete()

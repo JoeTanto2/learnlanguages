@@ -8,7 +8,7 @@ from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
-from .models import User_info, Chat, PrivateChatRoom, ChatRoom, ChatMessages, ChatMessagesManager, ProfilePicture, IsOnline
+from .models import User_info, Chat, PrivateChatRoom, ChatRoom, ChatMessages, ChatMessagesManager, ProfilePicture, IsOnline, ChatInfo
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
 from rest_framework.exceptions import ValidationError, ParseError
@@ -95,6 +95,23 @@ def user_profile (request, pk):
                       'avatar': avatar_url
                       })
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def chat_profile (request, pk):
+    user = request.user
+    creator = False
+    is_participant = False
+    chat = ChatInfo.objects.filter(chat_id=pk).first()
+    if not chat:
+        raise ValidationError ({"errorMessage":"there's no chat with this id"})
+    if chat.creator == user:
+        creator = True
+    if ChatRoom.objects.filter(users=user).exists():
+        is_participant = True
+    return Response ({"chat_name": chat.chat.chat_name, "chat_language": chat.chat.language,
+                      "avatar": chat.avatar.url, "is_creator": creator, "is_participant": is_participant})
+
+
 class Login (ObtainAuthToken):
     @csrf_exempt
     def post(self, request, *args, **kwargs):
@@ -115,13 +132,58 @@ class Login (ObtainAuthToken):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def search (request):
-    user = request.user.id
-    q = request.POST
-    object = User_info.objects.filter(native=q['q']).exclude(user_id=user)
-    serializer = Profile(object, many=True)
-    return Response (serializer.data)
+def search_chat (request):
+    info = request.data['data']
+    print(info)
+    if 'name' in info.keys():
+        chats = ChatInfo.objects.filter(chat__chat_name=info['name'], chat__language=info['language'])
+        list_to_send = []
+        for i in chats:
+            chat_info = {'chat_id': i.chat.id, 'chat_name': i.chat.chat_name, 'chat_creator': i.creator.id, 'chat_language': i.chat.language}
+            if i.avatar:
+                chat_info['avatar'] = i.avatar.url
+            else:
+                chat_info['avatar'] = None
+            list_to_send.append(chat_info)
+            return Response ({"data": list_to_send})
+    chats = ChatInfo.objects.filter(chat__language=info['language'])
+    list_to_send = []
+    for i in chats:
+        chat_info = {'chat_id': i.chat.id, 'chat_name': i.chat.chat_name, 'chat_creator': i.creator.id, 'chat_language': i.chat.language}
+        if i.avatar:
+            chat_info['avatar'] = i.avatar.url
+        else:
+            chat_info['avatar'] = None
+        list_to_send.append(chat_info)
+    return Response({"data": list_to_send})
 
+@csrf_exempt
+@api_view (["POST"])
+@permission_classes([IsAuthenticated])
+def user_search (request):
+    info = request.data
+    users = User.objects.filter(user_info__desired=info['desired'])
+    if 'name' in info.keys():
+        if info['name']:
+            users = users.filter(user_info__name__iexact=info['name'])
+    if 'native' in info.keys():
+        if info['native']:
+            users = users.filter(user_info__native=info['native'])
+    if users:
+        list_to_return = []
+        for i in users:
+            user_info = i.user_info_set.all()
+            profile_pic = i.profilepicture_set.only('picture').first()
+            dict = {'user_id': i.id, 'username': i.username, 'name': user_info[0].name, 'sex': user_info[0].sex,
+            'about': user_info[0].about, 'country': user_info[0].country,
+            'native': user_info[0].native, 'desired': user_info[0].desired}
+            if profile_pic:
+                dict['avatar'] = profile_pic.picture.url
+            else:
+                dict['avatar'] = None
+            list_to_return.append(dict)
+        return Response ({"data": list_to_return})
+    return Response ({"message": "no users found"})
 
 class Password_update(UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -224,15 +286,40 @@ def chat(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def room_create(request):
-    info = request.data['data']
+    info = request.data
     user = request.user
+    avatar_to_insert = None
+    if 'avatar' in info.keys():
+        avatar = info['avatar']
+        if avatar:
+            avatar_to_insert = avatar
     chat_name = Chat.objects.filter(chat_name__iexact=info['chat_name'])
     if chat_name:
         raise ValidationError({"errorMessage": f"Chat with name {info['chat_name']} already exists"})
     chat = Chat.objects.create(chat_name=info['chat_name'], language=info['language'])
+    chat_info = ChatInfo.objects.create(chat=chat, creator=user, avatar=avatar_to_insert)
     chat_room = ChatRoom.objects.create(chat_id=chat)
     chat_room.users.add(user)
     return Response({'response': f'Your chat {chat.chat_name} has been successfully created'})
+
+@csrf_exempt
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def chat_update(request):
+    user = request.user
+    info = request.data
+    chat_info = ChatInfo.objects.filter(chat_id=info['chat_id'])
+    chat = Chat.objects.filter(id=info['chat_id'])
+    if chat_info:
+        if chat_info[0].creator != user:
+            raise ValidationError ({"errorMessage": "you have no permission to make changes to the chat"})
+        if info['avatar']:
+            chat_info.create(avatar=info['avatar'], creator=user, chat=chat[0])
+            chat.update(chat_name=info['chat_name'])
+            return Response ({"message": "The chat information has been successfully updated"})
+        else:
+            chat.update(chat_name=info['chat_name'])
+            return Response({"message": "The chat information has been successfully updated"})
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -297,7 +384,23 @@ def leave_chat_room (request):
 def onlinecheck (request):
     info = request.query_params
     check = IsOnline.objects.filter(user_id=info['user_id']).first()
-    return Response ({'user_id': check.user.id, 'online': check.isonline, 'seen_last_time': check.last_time_seen})
+    if check:
+        return Response ({'user_id': check.user.id, 'online': check.isonline, 'seen_last_time': check.last_time_seen})
+    return Response ({'user_id': info['user_id'], 'online': None, 'seen_last_time': None})
+
+@api_view (["GET"])
+@permission_classes([IsAuthenticated])
+def add_user_to_chat (request):
+    user = request.user
+    info = request.query_params['chat_id']
+    chat = ChatRoom.objects.filter(chat_id_id=info).first()
+    if chat:
+        chat.users.add(user)
+        return Response({"message": "User has been successfully added"})
+    else:
+        chat_room = ChatRoom.objects.create(chat_id_id=info)
+        chat_room.users.add(user)
+        return Response ({"message": "User has been successfully added"})
 
 
 # @api_view (["PUT"])
