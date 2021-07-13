@@ -6,6 +6,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
 from django.core.exceptions import ObjectDoesNotExist
+from datetime import datetime
 import os
 import json
 from django.core.serializers.json import DjangoJSONEncoder
@@ -127,6 +128,7 @@ class IsOnline (models.Model):
     def __str__(self):
         return self.user.username
 
+
 class ChatInfo (models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
     creator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -149,7 +151,6 @@ def auto_delete_file_on_delete_chat(sender, instance, **kwargs):
 def delete_old_file_chat(sender, instance, **kwargs):
     try:
         old_instance = ChatInfo.objects.get(chat=instance.chat)
-        print(f'{old_instance} it is old')
     except ObjectDoesNotExist:
         return None
     old_instance.avatar.delete(save=False)
