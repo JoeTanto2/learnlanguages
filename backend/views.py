@@ -101,6 +101,7 @@ def chat_profile (request, pk):
     user = request.user
     creator = False
     is_participant = False
+    avatar_url = None
     chat = ChatInfo.objects.filter(chat_id=pk).first()
     if not chat:
         raise ValidationError ({"errorMessage":"there's no chat with this id"})
@@ -108,8 +109,10 @@ def chat_profile (request, pk):
         creator = True
     if ChatRoom.objects.filter(users=user).exists():
         is_participant = True
+    if chat.avatar:
+        avatar_url = chat.avatar.url
     return Response ({"chat_name": chat.chat.chat_name, "chat_language": chat.chat.language,
-                      "avatar": chat.avatar.url, "is_creator": creator, "is_participant": is_participant})
+                      "avatar": avatar_url, "is_creator": creator, "is_participant": is_participant})
 
 
 class Login (ObtainAuthToken):
@@ -260,6 +263,7 @@ def chat(request):
                     avatar_url = avatar.picture.url
                 dict = {}
                 dict["chat_id"] = i.room.id
+                dict['talk_to'] = i.user1.id
                 dict["chat_name"] = i.user1.username
                 dict["chat_type"] = "private"
                 dict['avatar'] = avatar_url
@@ -276,6 +280,7 @@ def chat(request):
                         avatar_url = avatar.picture.url
                     dict = {}
                     dict["chat_id"] = i.room.id
+                    dict['talk_to'] = i.user.id
                     dict["chat_name"] = i.user.username
                     dict["chat_type"] = "private"
                     dict['avatar'] = avatar_url
@@ -286,7 +291,7 @@ def chat(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def room_create(request):
-    info = request.data
+    info = request.data['data']
     user = request.user
     avatar_to_insert = None
     if 'avatar' in info.keys():
