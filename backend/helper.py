@@ -4,6 +4,7 @@ from asgiref.sync import sync_to_async
 from django.core.serializers import serialize
 from django.http import JsonResponse
 from datetime import datetime, date
+from django.utils import timezone
 from django.core.paginator import Paginator
 
 import json
@@ -82,7 +83,7 @@ def online (user_id):
 def offline (user_id):
     user = IsOnline.objects.filter(user_id=user_id)
     if user:
-        user.update(isonline=False, last_time_seen=datetime.now())
+        user.update(isonline=False, last_time_seen=timezone.now())
         print(user[0].last_time_seen)
     else:
         raise ValueError({"errorMessage": "User doesn't exist"})
