@@ -6,7 +6,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
 from django.core.exceptions import ObjectDoesNotExist
-from datetime import datetime
+
 import os
 import json
 from django.core.serializers.json import DjangoJSONEncoder
@@ -96,9 +96,6 @@ class ProfilePicture (models.Model):
         return f'{self.picture}'
 
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-
     # def delete(self, *args, **kwargs):
     #     self.picture.delete(save=False)
     #     super().delete()
@@ -123,10 +120,13 @@ def delete_old_file (sender, instance, **kwargs):
 class IsOnline (models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     isonline = models.BooleanField(default=False)
-    last_time_seen = models.DateTimeField(auto_now_add=True)
+    last_time_seen = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.user.username
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
 
 class ChatInfo (models.Model):

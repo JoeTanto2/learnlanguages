@@ -3,9 +3,9 @@ from django.contrib.auth.models import User
 from asgiref.sync import sync_to_async
 from django.core.serializers import serialize
 from django.http import JsonResponse
-from datetime import date, datetime
+from datetime import datetime, date
 from django.core.paginator import Paginator
-from datetime import datetime
+
 import json
 @sync_to_async
 def chat_room_query (room):
@@ -83,6 +83,7 @@ def offline (user_id):
     user = IsOnline.objects.filter(user_id=user_id)
     if user:
         user.update(isonline=False, last_time_seen=datetime.now())
+        print(user[0].last_time_seen)
     else:
         raise ValueError({"errorMessage": "User doesn't exist"})
 
