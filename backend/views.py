@@ -291,7 +291,7 @@ def chat(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def room_create(request):
-    info = request.data['data']
+    info = request.data
     user = request.user
     avatar_to_insert = None
     if 'avatar' in info.keys():

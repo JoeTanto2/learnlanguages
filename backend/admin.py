@@ -31,6 +31,12 @@ class Caching(Paginator):
 
     count = property(_get_count)
 
+class IsOnlineAdmin(admin.ModelAdmin):
+    list_display = ['user', 'isonline', 'last_time_seen']
+
+    class Meta:
+        model = IsOnline
+
 class ChatMessagesAdmin(admin.ModelAdmin):
     list_filter = ['room', 'sent_from', 'timestamp']
     list_display = ['room', 'sent_from', 'sent_to', 'timestamp', 'messages']
@@ -42,7 +48,6 @@ class ChatMessagesAdmin(admin.ModelAdmin):
 
     class Meta:
         model = ChatMessages
-
 admin.site.register(Chat, ChatAdmin)
 
 admin.site.register(ChatMessages, ChatMessagesAdmin)
@@ -50,5 +55,5 @@ admin.site.register(ChatMessages, ChatMessagesAdmin)
 admin.site.register(ChatRoom)
 admin.site.register(PrivateChatRoom)
 admin.site.register(ProfilePicture)
-admin.site.register(IsOnline)
+admin.site.register(IsOnline, IsOnlineAdmin)
 admin.site.register(ChatInfo)
