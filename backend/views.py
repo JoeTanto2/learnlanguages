@@ -133,15 +133,20 @@ class Login (ObtainAuthToken):
 
 
 @csrf_exempt
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def search_chat (request):
-    info = request.data['data']
+    info = request.query_params
     print(info)
     if 'name' in info.keys():
-        chats = ChatInfo.objects.filter(chat__chat_name=info['name'], chat__language=info['language'])
+        chats = ChatInfo.objects.filter(chat__chat_name__contains=info['name'], chat__language=info['language'])
+        paginator = Paginator(chats, 5)
+        try:
+            page = paginator.page(info['page'])
+        except EmptyPage:
+            raise ValidationError({"errorMessage": "There is no more messages to display."})
         list_to_send = []
-        for i in chats:
+        for i in page:
             chat_info = {'chat_id': i.chat.id, 'chat_name': i.chat.chat_name, 'chat_creator': i.creator.id, 'chat_language': i.chat.language}
             if i.avatar:
                 chat_info['avatar'] = i.avatar.url
@@ -150,8 +155,13 @@ def search_chat (request):
             list_to_send.append(chat_info)
             return Response ({"data": list_to_send})
     chats = ChatInfo.objects.filter(chat__language=info['language'])
+    paginator = Paginator(chats, 20)
+    try:
+        page = paginator.page(info['page'])
+    except EmptyPage:
+        raise ValidationError({"errorMessage": "There is no more messages to display."})
     list_to_send = []
-    for i in chats:
+    for i in page:
         chat_info = {'chat_id': i.chat.id, 'chat_name': i.chat.chat_name, 'chat_creator': i.creator.id, 'chat_language': i.chat.language}
         if i.avatar:
             chat_info['avatar'] = i.avatar.url
@@ -161,10 +171,10 @@ def search_chat (request):
     return Response({"data": list_to_send})
 
 @csrf_exempt
-@api_view (["POST"])
+@api_view (["GET"])
 @permission_classes([IsAuthenticated])
 def user_search (request):
-    info = request.data
+    info = request.query_params
     users = User.objects.filter(user_info__desired=info['desired'])
     if 'name' in info.keys():
         if info['name']:
@@ -174,7 +184,12 @@ def user_search (request):
             users = users.filter(user_info__native=info['native'])
     if users:
         list_to_return = []
-        for i in users:
+        paginator = Paginator(users, 5)
+        try:
+            page = paginator.page(info['page'])
+        except EmptyPage:
+            raise ValidationError({"errorMessage": "There is no more messages to display."})
+        for i in page:
             user_info = i.user_info_set.all()
             profile_pic = i.profilepicture_set.only('picture').first()
             dict = {'user_id': i.id, 'username': i.username, 'name': user_info[0].name, 'sex': user_info[0].sex,
@@ -248,9 +263,16 @@ def chat(request):
     if public:
         for i in public:
             dict = {}
+            avatar_url = None
             dict["chat_id"] = i.chat_id.id
             dict["chat_name"] = i.chat_id.chat_name
             dict["chat_type"] = "public"
+            avatar = ChatInfo.objects.filter(chat=i.chat_id).only('avatar')
+            if avatar.exists():
+                if avatar[0].avatar:
+                    print('hi')
+                    avatar_url = avatar[0].avatar.url
+            dict['avatar'] = avatar_url
             list_to_send.append(dict)
     if private:
         for i in private:
