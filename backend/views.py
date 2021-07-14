@@ -107,7 +107,7 @@ def chat_profile (request, pk):
         raise ValidationError ({"errorMessage":"there's no chat with this id"})
     if chat.creator == user:
         creator = True
-    if ChatRoom.objects.filter(users=user).exists():
+    if ChatRoom.objects.filter(chat_id=pk, users=user).exists():
         is_participant = True
     if chat.avatar:
         avatar_url = chat.avatar.url
