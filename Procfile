@@ -1,1 +1,1 @@
-web: gunicorn learnlanguages.wsgi
+web: gunicorn learnlanguages.wsgi --log-file -
