@@ -104,7 +104,7 @@ def chat_profile (request, pk):
     avatar_url = None
     chat = ChatInfo.objects.filter(chat_id=pk).first()
     if not chat:
-        raise ValidationError ({"errorMessage":"there's no chat with this id"})
+        raise ValidationError ({"errorMessage": "there's no chat with this id"})
     if chat.creator == user:
         creator = True
     if ChatRoom.objects.filter(chat_id=pk, users=user).exists():
@@ -144,7 +144,7 @@ def search_chat (request):
         try:
             page = paginator.page(info['page'])
         except EmptyPage:
-            raise ValidationError({"errorMessage": "There is no more messages to display."})
+            raise ValidationError({"errorMessage": "No chats found"})
         list_to_send = []
         for i in page:
             chat_info = {'chat_id': i.chat.id, 'chat_name': i.chat.chat_name, 'chat_creator': i.creator.id, 'chat_language': i.chat.language}
@@ -159,7 +159,7 @@ def search_chat (request):
     try:
         page = paginator.page(info['page'])
     except EmptyPage:
-        raise ValidationError({"errorMessage": "There is no more messages to display."})
+        raise ValidationError({"errorMessage": "No chat found"})
     list_to_send = []
     for i in page:
         chat_info = {'chat_id': i.chat.id, 'chat_name': i.chat.chat_name, 'chat_creator': i.creator.id, 'chat_language': i.chat.language}
@@ -188,7 +188,7 @@ def user_search (request):
         try:
             page = paginator.page(info['page'])
         except EmptyPage:
-            raise ValidationError({"errorMessage": "There is no more messages to display."})
+            raise ValidationError({"errorMessage": "No user found"})
         for i in page:
             user_info = i.user_info_set.all()
             profile_pic = i.profilepicture_set.only('picture').first()
@@ -201,7 +201,7 @@ def user_search (request):
                 dict['avatar'] = None
             list_to_return.append(dict)
         return Response ({"data": list_to_return})
-    return Response ({"message": "no users found"})
+    raise ValidationError({"errorMessage": "no user found"})
 
 class Password_update(UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
