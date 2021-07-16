@@ -1,1 +1,2 @@
-web: daphne learnlanguages.asgi:channel_layer --port $PORT --bind 0.0.0.0 -v2
+web: daphne -p $PORT -b 0.0.0.0 learnlanguages.asgi:application
+worker: celery worker --app=learnlanguages.celery.app -l DEBUG
