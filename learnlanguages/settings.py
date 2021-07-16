@@ -60,7 +60,7 @@ CACHES = {
 }
 
 #Channels
-ASGI_APPLICATION = "learnlanguages.routing.application"
+ASGI_APPLICATION = "learnlanguages.asgi.application"
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
