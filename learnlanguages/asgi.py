@@ -13,7 +13,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 import backend.routing
 
 application = ProtocolTypeRouter({
-    "http": django_asgi_app,
+    "https": django_asgi_app,
     "websocket": AuthMiddlewareStack(
         URLRouter(
             backend.routing.websocket_urlpatterns
