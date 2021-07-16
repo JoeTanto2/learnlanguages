@@ -1,1 +1,1 @@
-web: daphne learnlanguages.asgi:channel_layer --port $PORT --bind 0.0.0.0 -v2
+web: daphne learnlanguages.asgi:application --port $PORT --bind 0.0.0.0
